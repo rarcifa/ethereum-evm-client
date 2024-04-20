@@ -15,7 +15,7 @@ Configurable client instances tailored to your specific blockchain endpoint and 
 To install the package, run the following command in your project directory:
 
 ```bash
-npm install ethereum-evm-client
+npm i @rarcifa/ethereum-evm-client
 ```
 
 ## Usage
