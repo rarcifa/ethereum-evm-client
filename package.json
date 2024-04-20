@@ -16,7 +16,7 @@
     "prepare": "npm run build",
     "publish": "npm publish --access public"
   },
-  "author": "Your Name <your.email@example.com>",
+  "author": "Ricardo Arcifa rarcifa@gmail.com",
   "license": "MIT",
   "description": "A typescript client library for interacting with the Ethereum EVM, facilitating operations on both ERC20 and ERC721 tokens.",
   "keywords": [
