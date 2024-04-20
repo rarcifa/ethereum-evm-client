@@ -12,7 +12,7 @@ export const format = {
    * @returns {string} The value in Ether, formatted as a string with up to 18 decimal places.
    *
    * @example
-   * const etherValue = format.weiToEther("0x3ca751a12dd1da952");
+   * const etherValue = format.weiToEther('0xRETURNED_VALUE');
    *
    */
   weiToEther: (weiValue: string | number | bigint | boolean): string => {
@@ -38,7 +38,7 @@ export const format = {
    * @returns {string} The decoded ASCII string.
    *
    * @example
-   * const asciiString = format.decodeHexString("0x000000......000000000");
+   * const asciiString = format.decodeHexString('0xRETURNED_VALUE');
    */
   decodeHexString: (hexString: string): string => {
     const string: string = hexString.startsWith('0x')
@@ -73,7 +73,7 @@ export const format = {
    * @returns {string} The formatted token amount.
    *
    * @example
-   * const formattedAmount = format.formatTokenAmount("87824964111949", 6); // Convert smallest token unit to a human-readable format
+   * const formattedAmount = format.formatTokenAmount('0xRETURNED_VALUE', DECIMAL_VALUE);
    */
   formatTokenAmount: (
     tokenAmount: string | number | bigint,

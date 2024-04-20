@@ -1,13 +1,13 @@
-import { logger } from '../helpers/logger';
+import { logger } from '../utils/logger';
 import { AxiosInstance, AxiosResponse } from 'axios';
 import { JsonRpcResponse } from '../lib/interfaces/jsonRpcResponse.js';
-import { format } from '../helpers/formatting';
+import { format } from '../utils/formatting';
 import { JsonRpcRequestPayload } from '../lib/interfaces/jsonRpcRequest';
 import { Erc721, EthMethod } from '../lib/interfaces/ethMethods';
-import { constructEthMethodPayload } from '../helpers/ethCall';
+import { constructEthMethodPayload } from '../utils/ethCall';
 
 /**
- * Erc721 integration for managing Ethereum RPC requests.
+ * erc721 integration for managing Ethereum RPC requests.
  *
  * @fileoverview This file provides helper functions for Ethereum JSON-RPC interactions.
  * @namespace erc721

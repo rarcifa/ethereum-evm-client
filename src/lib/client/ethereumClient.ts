@@ -72,12 +72,12 @@ interface Erc20 {
 }
 
 /**
- * Interface for interacting with Erc721 token methods.
+ * Interface for interacting with erc721 token methods.
  *
  * @interface
- * @property {Function} getBalanceOf - Fetches the balance of a specified Erc721 token.
- * @property {Function} getOwnerOf - Fetches the owner address of a specific Erc721 token.
- * @property {Function} getTokenUri - Fetches the URI pointing to the metadata of the Erc721 token.
+ * @property {Function} getBalanceOf - Fetches the balance of a specified erc721 token.
+ * @property {Function} getOwnerOf - Fetches the owner address of a specific erc721 token.
+ * @property {Function} getTokenUri - Fetches the URI pointing to the metadata of the erc721 token.
  */
 interface Erc721 {
   /**
@@ -110,11 +110,11 @@ interface Erc721 {
 }
 
 /**
- * Defines the structure for a blockchain client that holds methods for interacting with both erc20 and Erc721 tokens.
+ * Defines the structure for a blockchain client that holds methods for interacting with both erc20 and erc721 tokens.
  *
  * @interface
  * @property {Erc20} erc20 - Methods for interacting with erc20 tokens.
- * @property {Erc721} erc721 - Methods for interacting with Erc721 tokens.
+ * @property {Erc721} erc721 - Methods for interacting with erc721 tokens.
  */
 interface BlockchainClient {
   erc20: Erc20;
@@ -122,7 +122,7 @@ interface BlockchainClient {
 }
 
 /**
- * Creates a new client for interacting with the erc20 contract over the Ethereum blockchain.
+ * Creates a new client for interacting with the EVM compatible blockchains.
  *
  * @param {ClientConfig} config - The configuration for setting up the client.
  * @returns {Object} Returns an object with methods to interact with the blockchain.

@@ -14,8 +14,11 @@ import {
  *
  * @example
  * const data = constructEthMethodPayload(
- *   '0xE51.....2DAde05',
- *   'eth_getBalance'
+ *  {
+ *   to: '0xCONTRACT_ADDRESS',
+ *   data: '0x6352211e#,
+ *  },
+ *  'eth_call'
  * );
  */
 export const constructEthMethodPayload = (

@@ -1,14 +1,14 @@
-import { format } from '../helpers/formatting';
-import { logger } from '../helpers/logger';
+import { format } from '../utils/formatting';
+import { logger } from '../utils/logger';
 import { AxiosInstance, AxiosResponse } from 'axios';
 
 import { JsonRpcRequestPayload } from '../lib/interfaces/jsonRpcRequest';
 import { JsonRpcResponse } from '../lib/interfaces/jsonRpcResponse';
 import { Erc20, EthMethod } from '../lib/interfaces/ethMethods';
-import { constructEthMethodPayload } from '../helpers/ethCall';
+import { constructEthMethodPayload } from '../utils/ethCall';
 
 /**
- * Erc20 integration for managing Ethereum RPC requests.
+ * erc20 integration for managing Ethereum RPC requests.
  *
  * @fileoverview This file provides helper functions for Ethereum JSON-RPC interactions.
  * @namespace erc20
