@@ -7,7 +7,8 @@ import axios, { AxiosInstance } from 'axios';
  *
  * @interface
  * @property {string} endpoint - The base URL for the RPC server.
- * @property {string} [apiKey] - Optional API key for accessing the RPC server if required.
+ * @property {string} [apiKey] - Optional. API key for accessing the RPC server if required.
+ * @property {Record<string, string>} [additionalHeaders] - Optional. Additional header options if required.
  */
 interface ClientConfig {
   endpoint: string;
@@ -110,7 +111,7 @@ interface Erc721 {
 }
 
 /**
- * Defines the structure for a blockchain client that holds methods for interacting with both erc20 and erc721 tokens.
+ * Interface for a blockchain client that holds methods for interacting with both erc20 and erc721 tokens.
  *
  * @interface
  * @property {Erc20} erc20 - Methods for interacting with erc20 tokens.
