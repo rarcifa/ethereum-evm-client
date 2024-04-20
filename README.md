@@ -49,7 +49,7 @@ const fetchErc20Balance = async (accountAddress, contractAddress) => {
 };
 ```
 
-### Interacting with CRC721 Tokens
+### Interacting with Erc721 Tokens
 
 ```ts
 const fetchErc721Owner = async (contractAddress) => {
@@ -64,7 +64,7 @@ const fetchErc721Owner = async (contractAddress) => {
 
 ## API
 
-### erc20 Methods
+### Erc20 Methods
 
 - `getBalance(accountAddress)`: Fetches the balance of the main token for an account.
 - `getBalanceOf(accountAddress, contractAddress)`: Fetches the balance of a specified ERC20 token for an account.
@@ -72,7 +72,7 @@ const fetchErc721Owner = async (contractAddress) => {
 - `getSymbol(contractAddress)`: Fetches the symbol of the ERC20 token.
 - `getTotalSupply(contractAddress)`: Fetches the total supply of the ERC20 token.
 
-### CRC721 Methods
+### Erc721 Methods
 
 - `getBalanceOf(accountAddress, contractAddress)`: Fetches the balance of specified ERC721 tokens for an account.
 - `getOwnerOf(contractAddress)`: Fetches the owner address of a specific ERC721 token.
