@@ -25,7 +25,7 @@ interface ClientConfig {
  * @property {Function} getSymbol - Fetches the symbol of the erc20 token.
  * @property {Function} getTotalSupply - Fetches the total supply of the erc20 token.
  */
-interface erc20 {
+interface Erc20 {
   /**
    * Fetches the balance of an account.
    *
@@ -72,14 +72,14 @@ interface erc20 {
 }
 
 /**
- * Interface for interacting with CRC721 token methods.
+ * Interface for interacting with Erc721 token methods.
  *
  * @interface
- * @property {Function} getBalanceOf - Fetches the balance of a specified CRC721 token.
- * @property {Function} getOwnerOf - Fetches the owner address of a specific CRC721 token.
- * @property {Function} getTokenUri - Fetches the URI pointing to the metadata of the CRC721 token.
+ * @property {Function} getBalanceOf - Fetches the balance of a specified Erc721 token.
+ * @property {Function} getOwnerOf - Fetches the owner address of a specific Erc721 token.
+ * @property {Function} getTokenUri - Fetches the URI pointing to the metadata of the Erc721 token.
  */
-interface CRC721 {
+interface Erc721 {
   /**
    * Fetches the token balance of an account for a specified erc721 contract.
    *
@@ -110,15 +110,15 @@ interface CRC721 {
 }
 
 /**
- * Defines the structure for a blockchain client that holds methods for interacting with both erc20 and CRC721 tokens.
+ * Defines the structure for a blockchain client that holds methods for interacting with both erc20 and Erc721 tokens.
  *
  * @interface
- * @property {erc20} erc20 - Methods for interacting with erc20 tokens.
- * @property {CRC721} erc721 - Methods for interacting with CRC721 tokens.
+ * @property {Erc20} erc20 - Methods for interacting with erc20 tokens.
+ * @property {Erc721} erc721 - Methods for interacting with Erc721 tokens.
  */
 interface BlockchainClient {
-  erc20: erc20;
-  erc721: CRC721;
+  erc20: Erc20;
+  erc721: Erc721;
 }
 
 /**

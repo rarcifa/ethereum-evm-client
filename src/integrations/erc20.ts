@@ -8,7 +8,7 @@ import { Erc20, EthMethod } from '../lib/interfaces/ethMethods';
 import { constructEthMethodPayload } from '../helpers/ethCall';
 
 /**
- * erc20 integration for managing Ethereum RPC requests.
+ * Erc20 integration for managing Ethereum RPC requests.
  *
  * @fileoverview This file provides helper functions for Ethereum JSON-RPC interactions.
  * @namespace erc20
