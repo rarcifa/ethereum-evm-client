@@ -25,7 +25,7 @@ Here’s how you can use the Ethereum EVM Client in your project:
 ### Configuring the Client
 
 ```ts
-import { createClient } from 'ethereum-evm-client';
+import { createClient } from '@rarcifa/ethereum-evm-clien';
 
 const client = createClient({
   endpoint: 'CUSTOM_RPC_ENDPOINT',
