@@ -70,6 +70,7 @@ export const erc721 = {
    * Fetches the owner address of the erc721 token.
    *
    * @param {string} contractAddress - The contract address of the erc721 instance.
+   * @param {string} tokenId - The specific token ID to check the owner of.
    * @param {AxiosInstance} ethereumInstance - The ethereum client to initialize the erc721 instance
    * @returns {Promise<string>} The owner address of the erc721 token.
    *
@@ -79,12 +80,15 @@ export const erc721 = {
 
   getOwnerOf: async (
     contractAddress: string,
+    tokenId: string,
     ethereumInstance: AxiosInstance
   ): Promise<string> => {
+    const paddedTokenId = tokenId.padStart(64, '0');
+    const param = `${Erc721.OwnerOf}${paddedTokenId}`;
     const data: JsonRpcRequestPayload = constructEthMethodPayload(
       {
         to: contractAddress,
-        data: Erc721.OwnerOf,
+        data: param,
       },
       EthMethod.Call
     );

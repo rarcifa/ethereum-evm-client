@@ -1,3 +1,4 @@
+import { erc1155 } from '../../integrations/erc1155';
 import { erc20 } from '../../integrations/erc20';
 import { erc721 } from '../../integrations/erc721';
 import axios, { AxiosInstance } from 'axios';
@@ -97,9 +98,10 @@ interface Erc721 {
    * Fetches the owner address of a specific erc721 token from a specified contract.
    *
    * @param {string} contractAddress - The contract address of the erc721 token.
+   * @param {string} tokenId - The token id of the erc721 token.
    * @returns {Promise<string>} The owner address of the specified erc721 token.
    */
-  getOwnerOf: (contractAddress: string) => Promise<string>;
+  getOwnerOf: (contractAddress: string, tokenId: string) => Promise<string>;
 
   /**
    * Fetches the URI (often a URL) that points to the metadata of the specified erc721 token.
@@ -110,16 +112,47 @@ interface Erc721 {
   getTokenUri: (contractAddress: string) => Promise<string>;
 }
 
+interface Erc1155 {
+  /**
+   * Fetches the token balance of an account for a specified erc1155 contract.
+   *
+   * @param {string} accountAddress - The account address to fetch the balance from.
+   * @param {string} contractAddress - The contract address of the erc1155 token.
+   * @returns {Promise<string>} A promise that resolves to the erc1155 token balance of the account.
+   */
+  getBalanceOf: (
+    accountAddress: string,
+    contractAddress: string,
+    tokenId: string
+  ) => Promise<string>;
+
+  /**
+   * Fetches the token balance of an account for a specified erc1155 contract.
+   *
+   * @param {string} accountAddress - The account address to fetch the balance from.
+   * @param {string} contractAddress - The contract address of the erc1155 token.
+   * @param {string} tokenId - The token id of the erc1155 token.
+   * @returns {Promise<string>} The owner address of the specified erc1155 token.
+   */
+  getBalanceOfBatch: (
+    accountAddress: string,
+    contractAddress: string,
+    tokenId: string[]
+  ) => Promise<string>;
+}
+
 /**
- * Interface for a blockchain client that holds methods for interacting with both erc20 and erc721 tokens.
+ * Interface for a blockchain client that holds methods for interacting with both erc20, erc721 and erc1155 tokens.
  *
  * @interface
  * @property {Erc20} erc20 - Methods for interacting with erc20 tokens.
  * @property {Erc721} erc721 - Methods for interacting with erc721 tokens.
+ * @property {Erc721} erc1155 - Methods for interacting with erc1155 tokens.
  */
 interface BlockchainClient {
   erc20: Erc20;
   erc721: Erc721;
+  erc1155: Erc1155;
 }
 
 /**
@@ -318,6 +351,7 @@ export const createClient = ({
        * Fetches the owner address of a specific erc721 token from a specified contract.
        *
        * @param {string} contractAddress - The contract address of the erc721 token.
+       * @param {string} tokenId - The token id of the erc721 token.
        * @returns {Promise<string>} The owner address of the specified erc721 token.
        *
        * @example
@@ -328,7 +362,7 @@ export const createClient = ({
        *
        * async function getOwnerOf() {
        *   try {
-       *     const ownerOf = await client.erc721.getOwnerOf('0xCONTRACT_ADDRESS');
+       *     const ownerOf = await client.erc721.getOwnerOf('0xCONTRACT_ADDRESS', 'TOKEN_ID');
        *     console.log('Owner of erc721 token:', ownerOf);
        *   } catch (e) {
        *     console.error('Error fetching owner of token:', e);
@@ -337,8 +371,11 @@ export const createClient = ({
        *
        * getOwnerOf();
        */
-      getOwnerOf: async (contractAddress: string): Promise<string> =>
-        erc721.getOwnerOf(contractAddress, instance),
+      getOwnerOf: async (
+        contractAddress: string,
+        tokenId: string
+      ): Promise<string> =>
+        erc721.getOwnerOf(contractAddress, tokenId, instance),
 
       /**
        * Fetches the URI (often a URL) that points to the metadata of the specified erc721 token.
@@ -365,6 +402,78 @@ export const createClient = ({
        */
       getTokenUri: async (contractAddress: string): Promise<string> =>
         erc721.getTokenUri(contractAddress, instance),
+    },
+    erc1155: {
+      /**
+       * Fetches the token balance of an account for a specified erc1155 contract.
+       *
+       * @param {string} accountAddress - The account address to fetch the balance from.
+       * @param {string} contractAddress - The contract address of the erc1155 token.
+       * @returns {Promise<string>} A promise that resolves to the erc1155 token balance of the account.
+       *
+       * @example
+       * const client = createClient({
+       *   endpoint: 'RPC_ENDPOINT',
+       *   apiKey: 'RPC_API_KEY'
+       * });
+       *
+       * async function getBalanceOf() {
+       *   try {
+       *     const balanceOf = await client.erc1155.getBalanceOf('0xACCOUNT_ADDRESS', '0xCONTRACT_ADDRESS', 'TOKEN_ID');
+       *     console.log('Balance of erc1155 token:', balanceOf);
+       *   } catch (e) {
+       *     console.error('Error fetching balance of token:', e);
+       *   }
+       * }
+       *
+       * getBalanceOf();
+       */
+      getBalanceOf: (
+        accountAddress: string,
+        contractAddress: string,
+        tokenId: string
+      ): Promise<string> =>
+        erc1155.getBalanceOf(
+          accountAddress,
+          contractAddress,
+          tokenId,
+          instance
+        ),
+      /**
+       * Fetches the balance of an account for a specified erc1155 contract.
+       *
+       * @param {string} accountAddress - The account address to fetch the balance from.
+       * @param {string} contractAddress - The contract address of the erc1155 token.
+       * @returns {Promise<string>} A promise that resolves to the erc1155 token balance of the account.
+       *
+       * @example
+       * const client = createClient({
+       *   endpoint: 'RPC_ENDPOINT',
+       *   apiKey: 'RPC_API_KEY'
+       * });
+       *
+       * async function getBalanceOfBatch() {
+       *   try {
+       *     const balanceOfBatch = await client.erc1155.getBalanceOfBatch('0xACCOUNT_ADDRESS', '0xCONTRACT_ADDRESS', ['TOKEN_ID_1', 'TOKEN_ID_2']);
+       *     console.log('Balance of batch of erc1155 token:', balanceOfBatch);
+       *   } catch (e) {
+       *     console.error('Error fetching balanceOfBatch of tokens:', e);
+       *   }
+       * }
+       *
+       * getBalanceOfBatch();
+       */
+      getBalanceOfBatch: (
+        accountAddress: string,
+        contractAddress: string,
+        tokenId: string[]
+      ): Promise<string> =>
+        erc1155.getBalanceOfBatch(
+          accountAddress,
+          contractAddress,
+          tokenId,
+          instance
+        ),
     },
   };
 };
