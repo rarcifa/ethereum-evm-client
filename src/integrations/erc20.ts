@@ -1,11 +1,12 @@
-import { format } from '../utils/formatting';
-import { logger } from '../utils/logger';
 import { AxiosInstance, AxiosResponse } from 'axios';
 
+import { Erc20, EthMethod } from '../lib/interfaces/ethMethods';
 import { JsonRpcRequestPayload } from '../lib/interfaces/jsonRpcRequest';
 import { JsonRpcResponse } from '../lib/interfaces/jsonRpcResponse';
-import { Erc20, EthMethod } from '../lib/interfaces/ethMethods';
+
 import { constructEthMethodPayload } from '../utils/ethCall';
+import { format } from '../utils/formatting';
+import { logger } from '../utils/logger';
 
 /**
  * erc20 integration for managing Ethereum RPC requests.
@@ -243,7 +244,7 @@ export const erc20 = {
         throw new Error('[erc20/getTotalSupply] error: No result returned');
       }
 
-      const result: string = format.formatTokenAmount(response.data.result, 6);
+      const result: string = format.formatTokenAmount(response.data.result, 18);
       return result;
     } catch (e) {
       logger.error('[erc20/getTotalSupply] error:', e);

@@ -1,7 +1,8 @@
+import axios, { AxiosInstance } from 'axios';
+
 import { erc1155 } from '../../integrations/erc1155';
 import { erc20 } from '../../integrations/erc20';
 import { erc721 } from '../../integrations/erc721';
-import axios, { AxiosInstance } from 'axios';
 
 /**
  * Configuration parameters for creating a blockchain client instance.
@@ -107,9 +108,10 @@ interface Erc721 {
    * Fetches the URI (often a URL) that points to the metadata of the specified erc721 token.
    *
    * @param {string} contractAddress - The contract address of the erc721 token.
+   * @param {string} tokenId - The token id of the erc721 token.
    * @returns {Promise<string>} The URI of the specified erc721 token.
    */
-  getTokenUri: (contractAddress: string) => Promise<string>;
+  getTokenUri: (contractAddress: string, tokenId: string) => Promise<string>;
 }
 
 interface Erc1155 {
@@ -129,15 +131,15 @@ interface Erc1155 {
   /**
    * Fetches the token balance of an account for a specified erc1155 contract.
    *
-   * @param {string} accountAddress - The account address to fetch the balance from.
+   * @param {string[]} accountAddresses - The account address to fetch the balance from.
    * @param {string} contractAddress - The contract address of the erc1155 token.
-   * @param {string} tokenId - The token id of the erc1155 token.
+   * @param {string[]} tokenIds - The token ids of the erc1155 token.
    * @returns {Promise<string>} The owner address of the specified erc1155 token.
    */
   getBalanceOfBatch: (
-    accountAddress: string,
+    accountAddresses: string[],
     contractAddress: string,
-    tokenId: string[]
+    tokenIds: string[]
   ) => Promise<string>;
 }
 
@@ -381,6 +383,7 @@ export const createClient = ({
        * Fetches the URI (often a URL) that points to the metadata of the specified erc721 token.
        *
        * @param {string} contractAddress - The contract address of the erc721 token.
+       * @param {string} tokenId - The token id of the erc721 token.
        * @returns {Promise<string>} The URI of the specified erc721 token.
        *
        * @example
@@ -391,7 +394,7 @@ export const createClient = ({
        *
        * async function getTokenUri() {
        *   try {
-       *     const uri = await client.erc721.getTokenUri('0xCONTRACT_ADDRESS');
+       *     const uri = await client.erc721.getTokenUri('0xCONTRACT_ADDRESS', 'TOKEN_ID);
        *     console.log('Uri of erc721 token:', uri);
        *   } catch (e) {
        *     console.error('Error fetching uri of token:', e);
@@ -400,8 +403,11 @@ export const createClient = ({
        *
        * getTokenUri();
        */
-      getTokenUri: async (contractAddress: string): Promise<string> =>
-        erc721.getTokenUri(contractAddress, instance),
+      getTokenUri: async (
+        contractAddress: string,
+        tokenId: string
+      ): Promise<string> =>
+        erc721.getTokenUri(contractAddress, tokenId, instance),
     },
     erc1155: {
       /**
@@ -409,6 +415,7 @@ export const createClient = ({
        *
        * @param {string} accountAddress - The account address to fetch the balance from.
        * @param {string} contractAddress - The contract address of the erc1155 token.
+       * @param {string} tokenId - The token id of the erc1155 token.
        * @returns {Promise<string>} A promise that resolves to the erc1155 token balance of the account.
        *
        * @example
@@ -439,11 +446,13 @@ export const createClient = ({
           tokenId,
           instance
         ),
+
       /**
        * Fetches the balance of an account for a specified erc1155 contract.
        *
-       * @param {string} accountAddress - The account address to fetch the balance from.
+       * @param {string} accountAddresses - The account addresses to fetch the balance from.
        * @param {string} contractAddress - The contract address of the erc1155 token.
+       * @param {string[]} tokenIds - The token ids of the erc1155 token.
        * @returns {Promise<string>} A promise that resolves to the erc1155 token balance of the account.
        *
        * @example
@@ -464,14 +473,14 @@ export const createClient = ({
        * getBalanceOfBatch();
        */
       getBalanceOfBatch: (
-        accountAddress: string,
+        accountAddresses: string[],
         contractAddress: string,
-        tokenId: string[]
+        tokenIds: string[]
       ): Promise<string> =>
         erc1155.getBalanceOfBatch(
-          accountAddress,
+          accountAddresses,
           contractAddress,
-          tokenId,
+          tokenIds,
           instance
         ),
     },

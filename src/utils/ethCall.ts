@@ -1,7 +1,7 @@
 import {
   JsonRpcRequestPayload,
   RpcParams,
-} from '../lib/interfaces/jsonRpcRequest';
+} from '../lib/interfaces/jsonRpcRequest.js';
 
 /**
  * This function creates the payload necessary for making JSON-RPC calls such as `eth_call`.

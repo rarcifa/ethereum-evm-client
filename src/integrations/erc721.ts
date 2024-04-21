@@ -1,10 +1,12 @@
-import { logger } from '../utils/logger';
-import { AxiosInstance, AxiosResponse } from 'axios';
-import { JsonRpcResponse } from '../lib/interfaces/jsonRpcResponse.js';
-import { format } from '../utils/formatting';
-import { JsonRpcRequestPayload } from '../lib/interfaces/jsonRpcRequest';
+import axios, { AxiosInstance, AxiosResponse } from 'axios';
+
 import { Erc721, EthMethod } from '../lib/interfaces/ethMethods';
+import { JsonRpcRequestPayload } from '../lib/interfaces/jsonRpcRequest';
+import { JsonRpcResponse } from '../lib/interfaces/jsonRpcResponse';
+
 import { constructEthMethodPayload } from '../utils/ethCall';
+import { format } from '../utils/formatting';
+import { logger } from '../utils/logger';
 
 /**
  * erc721 integration for managing Ethereum RPC requests.
@@ -75,7 +77,7 @@ export const erc721 = {
    * @returns {Promise<string>} The owner address of the erc721 token.
    *
    * @example
-   * const data = erc721.getOwnerOf('0xCONTRACT_ADDRESS');
+   * const data = erc721.getOwnerOf('0xCONTRACT_ADDRESS', 'TOKEN_ID');
    */
 
   getOwnerOf: async (
@@ -109,7 +111,7 @@ export const erc721 = {
         throw new Error('[erc721/getOwnerOf] error: No result returned');
       }
 
-      const result: string = response.data.result;
+      const result = response.data.result.replace(/^(0x)0+/, '$1');
       return result;
     } catch (e) {
       logger.error('[erc721/getOwnerOf] error:', e);
@@ -121,21 +123,25 @@ export const erc721 = {
    * Fetches the uri of the erc721 token.
    *
    * @param {string} contractAddress - The contract address of the erc721 instance.
+   * @param {string} tokenId - The specific token ID to check the owner of.
    * @param {AxiosInstance} ethereumInstance - The ethereum client to initialize the erc721 instance
    * @returns {Promise<string>} The uri of the erc721 token.
    *
    * @example
-   * const data = erc721.getTokenUri('0xCONTRACT_ADDRESS');
+   * const data = erc721.getTokenUri('0xCONTRACT_ADDRESS', 'TOKEN_ID');
    */
 
   getTokenUri: async (
     contractAddress: string,
+    tokenId: string,
     ethereumInstance: AxiosInstance
   ): Promise<string> => {
+    const paddedTokenId = tokenId.padStart(64, '0');
+    const param = `${Erc721.TokenURI}${paddedTokenId}`;
     const data: JsonRpcRequestPayload = constructEthMethodPayload(
       {
         to: contractAddress,
-        data: Erc721.TokenURI,
+        data: param,
       },
       EthMethod.Call
     );
@@ -159,6 +165,14 @@ export const erc721 = {
       }
 
       const result: string = format.decodeHexString(response.data.result);
+      const metadataResponse: AxiosResponse<string, string> = await axios.get(
+        result
+      );
+
+      if (metadataResponse) {
+        return JSON.stringify(metadataResponse.data);
+      }
+
       return result;
     } catch (e) {
       logger.error('[erc721/getBalanceOf] error:', e);

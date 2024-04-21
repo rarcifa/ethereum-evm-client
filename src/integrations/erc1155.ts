@@ -1,10 +1,12 @@
-import { logger } from '../utils/logger';
 import { AxiosInstance, AxiosResponse } from 'axios';
-import { JsonRpcResponse } from '../lib/interfaces/jsonRpcResponse.js';
-import { JsonRpcRequestPayload } from '../lib/interfaces/jsonRpcRequest';
+
 import { Erc1155, EthMethod } from '../lib/interfaces/ethMethods';
+import { JsonRpcRequestPayload } from '../lib/interfaces/jsonRpcRequest';
+import { JsonRpcResponse } from '../lib/interfaces/jsonRpcResponse';
+
 import { constructEthMethodPayload } from '../utils/ethCall';
 import { format } from '../utils/formatting';
+import { logger } from '../utils/logger';
 
 /**
  * erc1155 integration for managing Ethereum RPC requests related to erc1155 tokens.
@@ -27,8 +29,8 @@ export const erc1155 = {
    */
   getBalanceOf: async (
     accountAddress: string,
-    tokenId: string,
     contractAddress: string,
+    tokenId: string,
     ethereumInstance: AxiosInstance
   ): Promise<string> => {
     const paddedTokenId = tokenId.substring(2).padStart(64, '0');
@@ -71,9 +73,9 @@ export const erc1155 = {
   /**
    * Fetches the token balances for multiple token IDs at multiple account addresses.
    *
-   * @param {string} accountAddress - The account addresses to fetch the token balances from.
+   * @param {string[]} accountAddresses - The account addresses to fetch the token balances from.
    * @param {string} contractAddress - The contract address of the erc1155 token.
-   * @param {string[]} tokenId - The specific token IDs to check the balances of.
+   * @param {string[]} tokenIds - The specific token IDs to check the balances of.
    * @param {AxiosInstance} ethereumInstance - The ethereum client instance.
    * @returns {Promise<string>} The balances of the erc1155 tokens for the specified token IDs at the given account addresses.
    *
@@ -81,13 +83,16 @@ export const erc1155 = {
    * const balances = erc1155.getBalanceOfBatch('0xACCOUNT_ADDRESS', '0xCONTRACT_ADDRESS', ['TOKEN_ID_1', 'TOKEN_ID_2'], ethereumClient);
    */
   getBalanceOfBatch: async (
-    accountAddress: string,
+    accountAddresses: string[],
     contractAddress: string,
-    tokenId: string[],
+    tokenIds: string[],
     ethereumInstance: AxiosInstance
   ): Promise<string> => {
-    const paddedAddress = accountAddress.substring(2).padStart(64, '0');
-    const param = `${Erc1155.BalanceOfBatch}${paddedAddress}`;
+    const { addresses, ids } = format.concatAddressesAndIds(
+      accountAddresses,
+      tokenIds
+    );
+    const param = `${Erc1155.BalanceOfBatch}${addresses}${ids}`;
     const data: JsonRpcRequestPayload = constructEthMethodPayload(
       {
         to: contractAddress,

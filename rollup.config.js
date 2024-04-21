@@ -8,7 +8,7 @@ export default {
   output: [
     {
       file: 'dist/index.cjs.js',
-      format: 'cjs',
+      format: 'js',
       sourcemap: true,
       exports: 'auto' 
     },
