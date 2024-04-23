@@ -165,9 +165,7 @@ export const erc721 = {
       }
 
       const result: string = format.decodeHexString(response.data.result);
-      const metadataResponse: AxiosResponse<string, string> = await axios.get(
-        result
-      );
+      const metadataResponse: AxiosResponse<string> = await axios.get(result);
 
       if (metadataResponse) {
         return JSON.stringify(metadataResponse.data);

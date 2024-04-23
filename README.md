@@ -1,13 +1,17 @@
 # Ethereum EVM Client
 
-The Ethereum EVM Client is a TypeScript/JavaScript library designed to facilitate easy and efficient interactions with any Ethereum Virtual Machine (EVM) combatible blockchain. This client library provides methods to interact with ERC20, ERC721 tokens as well as other utilities, allowing developers to fetch balances, token metadata, and perform other contract interactions seamlessly.
+The Ethereum EVM Client is a TypeScript/JavaScript library designed to facilitate easy and efficient interactions with any Ethereum Virtual Machine (EVM) combatible blockchain. This client library provides methods to interact with ERC20, ERC721 and ERC1155 tokens as well as other utilities, allowing developers to fetch balances, token metadata, and perform other contract interactions seamlessly.
 
 ![npm](https://img.shields.io/npm/v/@rarcifa/ethereum-evm-client)
+![ES Version](https://img.shields.io/badge/ES6-yellow)
+![Node Version](https://img.shields.io/badge/node-16.x-green)
+
+This is a sub-package of [@rarcifa/ethereum-evm-client][repo].
 
 ## Features
 
 Simple and intuitive API for interacting with any EVM compatible blockchain.
-Supports both ERC20 and ERC721 token standards.
+Supports both ERC20, ERC721, and ERC1155 token standards.
 Configurable client instances tailored to your specific blockchain endpoint and security needs.
 
 ## Installation
@@ -28,7 +32,7 @@ Here’s how you can use the Ethereum EVM Client in your project:
 import { createClient } from '@rarcifa/ethereum-evm-clien';
 
 const client = createClient({
-  endpoint: 'CUSTOM_RPC_ENDPOINT',
+  endpoint: 'CUSTOM_RPC_ENDPOINT', // evm rpc endpoint
   apiKey: 'OPPTIONAL_API_KEY', // optional
 });
 ```
@@ -77,6 +81,11 @@ const fetchErc721Owner = async (contractAddress) => {
 - `getBalanceOf(accountAddress, contractAddress)`: Fetches the balance of specified ERC721 tokens for an account.
 - `getOwnerOf(contractAddress)`: Fetches the owner address of a specific ERC721 token.
 - `getTokenUri(contractAddress)`: Fetches the URI pointing to the metadata of the ERC721 token.
+
+### Erc1155 Methods
+
+- `getBalanceOf(accountAddress, contractAddress, tokenId)`: Fetches the balance of a specific token ID for an ERC1155 token at a given account address.
+- `getBalanceOfBatch(accountAddresses, contractAddress, tokenIds)`: Fetches the balances for multiple token IDs at multiple account addresses for ERC1155 tokens.
 
 ## Contributing
 
