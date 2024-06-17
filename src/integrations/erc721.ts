@@ -6,7 +6,6 @@ import { JsonRpcResponse } from '../lib/interfaces/jsonRpcResponse.js';
 
 import { constructEthMethodPayload } from '../utils/ethCall.js';
 import { format } from '../utils/formatting.js';
-import { logger } from '../utils/logger.js';
 
 /**
  * erc721 integration for managing Ethereum RPC requests.
@@ -46,7 +45,7 @@ export const erc721 = {
         await ethereumInstance.post<JsonRpcResponse<string>>('', data);
 
       if (response.data.error) {
-        logger.error(
+        console.error(
           '[erc721/getBalanceOf] error:',
           response.data.error.message
         );
@@ -56,14 +55,14 @@ export const erc721 = {
       }
 
       if (!response.data.result) {
-        logger.error('[erc721/getBalanceOf] error: No result returned');
+        console.error('[erc721/getBalanceOf] error: No result returned');
         throw new Error('[erc721/getBalanceOf] error: No result returned');
       }
 
       const result: string = format.formatTokenAmount(response.data.result, 0);
       return result;
     } catch (e) {
-      logger.error('[erc721/getBalanceOf] error:', e);
+      console.error('[erc721/getBalanceOf] error:', e);
       throw e;
     }
   },
@@ -100,21 +99,24 @@ export const erc721 = {
         await ethereumInstance.post<JsonRpcResponse<string>>('', data);
 
       if (response.data.error) {
-        logger.error('[erc721/getOwnerOf] error:', response.data.error.message);
+        console.error(
+          '[erc721/getOwnerOf] error:',
+          response.data.error.message
+        );
         throw new Error(
           `[erc721/getOwnerOf] error: ${response.data.error.message}`
         );
       }
 
       if (!response.data.result) {
-        logger.error('[erc721/getOwnerOf] error: No result returned');
+        console.error('[erc721/getOwnerOf] error: No result returned');
         throw new Error('[erc721/getOwnerOf] error: No result returned');
       }
 
       const result = response.data.result.replace(/^(0x)0+/, '$1');
       return result;
     } catch (e) {
-      logger.error('[erc721/getOwnerOf] error:', e);
+      console.error('[erc721/getOwnerOf] error:', e);
       throw e;
     }
   },
@@ -150,7 +152,7 @@ export const erc721 = {
         await ethereumInstance.post<JsonRpcResponse<string>>('', data);
 
       if (response.data.error) {
-        logger.error(
+        console.error(
           '[erc721/getBalanceOf] error:',
           response.data.error.message
         );
@@ -160,7 +162,7 @@ export const erc721 = {
       }
 
       if (!response.data.result) {
-        logger.error('[erc721/getBalanceOf] error: No result returned');
+        console.error('[erc721/getBalanceOf] error: No result returned');
         throw new Error('[erc721/getBalanceOf] error: No result returned');
       }
 
@@ -173,7 +175,7 @@ export const erc721 = {
 
       return result;
     } catch (e) {
-      logger.error('[erc721/getBalanceOf] error:', e);
+      console.error('[erc721/getBalanceOf] error:', e);
       throw e;
     }
   },

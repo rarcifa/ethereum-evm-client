@@ -6,7 +6,6 @@ import { JsonRpcResponse } from '../lib/interfaces/jsonRpcResponse.js';
 
 import { constructEthMethodPayload } from '../utils/ethCall.js';
 import { format } from '../utils/formatting.js';
-import { logger } from '../utils/logger.js';
 
 /**
  * erc1155 integration for managing Ethereum RPC requests related to erc1155 tokens.
@@ -49,7 +48,7 @@ export const erc1155 = {
         await ethereumInstance.post<JsonRpcResponse<string>>('', data);
 
       if (response.data.error) {
-        logger.error(
+        console.error(
           '[erc1155/getBalanceOf] Error:',
           response.data.error.message
         );
@@ -59,13 +58,13 @@ export const erc1155 = {
       }
 
       if (!response.data.result) {
-        logger.error('[erc1155/getBalanceOf] error: No result returned');
+        console.error('[erc1155/getBalanceOf] error: No result returned');
         throw new Error('[erc1155/getBalanceOf] error: No result returned');
       }
 
       return format.formatTokenAmount(response.data.result, 0);
     } catch (error) {
-      logger.error('[erc1155/getBalanceOf] Exception:', error);
+      console.error('[erc1155/getBalanceOf] Exception:', error);
       throw error;
     }
   },
@@ -106,7 +105,7 @@ export const erc1155 = {
         await ethereumInstance.post<JsonRpcResponse<string>>('', data);
 
       if (response.data.error) {
-        logger.error(
+        console.error(
           '[erc1155/getBalanceOfBatch] Error:',
           response.data.error.message
         );
@@ -116,7 +115,7 @@ export const erc1155 = {
       }
 
       if (!response.data.result) {
-        logger.error('[erc1155/getBalanceOfBatch] error: No result returned');
+        console.error('[erc1155/getBalanceOfBatch] error: No result returned');
         throw new Error(
           '[erc1155/getBalanceOfBatch] error: No result returned'
         );
@@ -124,7 +123,7 @@ export const erc1155 = {
 
       return format.formatTokenAmount(response.data.result, 0);
     } catch (error) {
-      logger.error('[erc1155/getBalanceOfBatch] Exception:', error);
+      console.error('[erc1155/getBalanceOfBatch] Exception:', error);
       throw error;
     }
   },

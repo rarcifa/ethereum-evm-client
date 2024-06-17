@@ -6,7 +6,6 @@ import { JsonRpcResponse } from '../lib/interfaces/jsonRpcResponse.js';
 
 import { constructEthMethodPayload } from '../utils/ethCall.js';
 import { format } from '../utils/formatting.js';
-import { logger } from '../utils/logger.js';
 
 /**
  * erc20 integration for managing Ethereum RPC requests.
@@ -39,21 +38,21 @@ export const erc20 = {
         await ethereumInstance.post<JsonRpcResponse<string>>('', data);
 
       if (response.data.error) {
-        logger.error('[erc20/getBalance] error:', response.data.error.message);
+        console.log('[erc20/getBalance] error:', response.data.error.message);
         throw new Error(
           `[erc20/getBalance] error: ${response.data.error.message}`
         );
       }
 
       if (!response.data.result) {
-        logger.error('[erc20/getBalance] error: No result returned');
+        console.error('[erc20/getBalance] error: No result returned');
         throw new Error('[erc20/getBalance] error: No result returned');
       }
 
       const result: string = format.weiToEther(response.data.result);
       return result;
     } catch (e) {
-      logger.error('[erc20/getBalance] error:', e);
+      console.error('[erc20/getBalance] error:', e);
       throw e;
     }
   },
@@ -89,7 +88,7 @@ export const erc20 = {
         await ethereumInstance.post<JsonRpcResponse<string>>('', data);
 
       if (response.data.error) {
-        logger.error(
+        console.error(
           '[erc20/getBalanceOf] error:',
           response.data.error.message
         );
@@ -99,14 +98,14 @@ export const erc20 = {
       }
 
       if (!response.data.result) {
-        logger.error('[erc20/getBalanceOf] error: No result returned');
+        console.error('[erc20/getBalanceOf] error: No result returned');
         throw new Error('[erc20/getBalanceOf] error: No result returned');
       }
 
       const result: string = format.weiToEther(response.data.result);
       return result;
     } catch (e) {
-      logger.error('[erc20/getBalanceOf] error:', e);
+      console.error('[erc20/getBalanceOf] error:', e);
       throw e;
     }
   },
@@ -138,21 +137,21 @@ export const erc20 = {
         await ethereumInstance.post<JsonRpcResponse<string>>('', data);
 
       if (response.data.error) {
-        logger.error('[erc20/getName] error:', response.data.error.message);
+        console.error('[erc20/getName] error:', response.data.error.message);
         throw new Error(
           `[erc20/getName] error: ${response.data.error.message}`
         );
       }
 
       if (!response.data.result) {
-        logger.error('[erc20/getName] error: No result returned');
+        console.error('[erc20/getName] error: No result returned');
         throw new Error('[erc20/getName] error: No result returned');
       }
 
       const result: string = format.decodeHexString(response.data.result);
       return result;
     } catch (e) {
-      logger.error('[erc20/getName] error:', e);
+      console.error('[erc20/getName] error:', e);
       throw e;
     }
   },
@@ -184,21 +183,21 @@ export const erc20 = {
         await ethereumInstance.post<JsonRpcResponse<string>>('', data);
 
       if (response.data.error) {
-        logger.error('[erc20/getSymbol] error:', response.data.error.message);
+        console.error('[erc20/getSymbol] error:', response.data.error.message);
         throw new Error(
           `[erc20/getSymbol] error: ${response.data.error.message}`
         );
       }
 
       if (!response.data.result) {
-        logger.error('[erc20/getSymbol] error: No result returned');
+        console.error('[erc20/getSymbol] error: No result returned');
         throw new Error('[erc20/getSymbol] error: No result returned');
       }
 
       const result: string = format.decodeHexString(response.data.result);
       return result;
     } catch (e) {
-      logger.error('[erc20/getSymbol] error:', e);
+      console.error('[erc20/getSymbol] error:', e);
       throw e;
     }
   },
@@ -230,7 +229,7 @@ export const erc20 = {
         await ethereumInstance.post<JsonRpcResponse<string>>('', data);
 
       if (response.data.error) {
-        logger.error(
+        console.error(
           '[erc20/getTotalSupply] error:',
           response.data.error.message
         );
@@ -240,14 +239,14 @@ export const erc20 = {
       }
 
       if (!response.data.result) {
-        logger.error('[erc20/getTotalSupply] error: No result returned');
+        console.error('[erc20/getTotalSupply] error: No result returned');
         throw new Error('[erc20/getTotalSupply] error: No result returned');
       }
 
       const result: string = format.formatTokenAmount(response.data.result, 18);
       return result;
     } catch (e) {
-      logger.error('[erc20/getTotalSupply] error:', e);
+      console.error('[erc20/getTotalSupply] error:', e);
       throw e;
     }
   },

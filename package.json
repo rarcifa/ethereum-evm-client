@@ -1,6 +1,6 @@
 {
   "name": "@rarcifa/ethereum-evm-client",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "private": false,
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -68,7 +68,6 @@
   "peerDependencies": {
     "axios": "^1.6.8",
     "lodash": "^4.17.21",
-    "tslib": "^2.6.2",
-    "winston": "^3.13.0"
+    "tslib": "^2.6.2"
   }
 }

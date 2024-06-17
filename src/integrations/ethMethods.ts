@@ -4,7 +4,6 @@ import { JsonRpcRequestPayload } from '../lib/interfaces/jsonRpcRequest.js';
 import { JsonRpcResponse } from '../lib/interfaces/jsonRpcResponse.js';
 
 import { constructEthMethodPayload } from '../utils/ethCall.js';
-import { logger } from '../utils/logger.js';
 import { State } from '../lib/client/ethereumClient.js';
 import { EthMethod } from '../lib/interfaces/ethMethods.js';
 
@@ -42,7 +41,7 @@ export const ethMethods = {
       >('', data);
 
       if (response.data.error) {
-        logger.error(
+        console.error(
           '[ethMethods/getBlockByNumber] error:',
           response.data.error.message
         );
@@ -52,7 +51,9 @@ export const ethMethods = {
       }
 
       if (!response.data.result) {
-        logger.error('[ethMethods/getBlockByNumber] error: No result returned');
+        console.error(
+          '[ethMethods/getBlockByNumber] error: No result returned'
+        );
         throw new Error(
           '[ethMethods/getBlockByNumber] error: No result returned'
         );
@@ -60,7 +61,7 @@ export const ethMethods = {
 
       return response.data.result;
     } catch (e) {
-      logger.error('[ethMethods/getBlockByNumber] error:', e);
+      console.error('[ethMethods/getBlockByNumber] error:', e);
       throw e;
     }
   },
