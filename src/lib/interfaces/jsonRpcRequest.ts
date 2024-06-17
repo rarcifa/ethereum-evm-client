@@ -1,4 +1,4 @@
-import { HttpMessages } from './httpEnums';
+import { HttpMessages } from './httpEnums.js';
 
 /**
  * Interface representing the structure of a JSON-RPC request payload.

@@ -1,12 +1,12 @@
 import { AxiosInstance, AxiosResponse } from 'axios';
 
-import { Erc1155, EthMethod } from '../lib/interfaces/ethMethods';
-import { JsonRpcRequestPayload } from '../lib/interfaces/jsonRpcRequest';
-import { JsonRpcResponse } from '../lib/interfaces/jsonRpcResponse';
+import { Erc1155, EthMethod } from '../lib/interfaces/ethMethods.js';
+import { JsonRpcRequestPayload } from '../lib/interfaces/jsonRpcRequest.js';
+import { JsonRpcResponse } from '../lib/interfaces/jsonRpcResponse.js';
 
-import { constructEthMethodPayload } from '../utils/ethCall';
-import { format } from '../utils/formatting';
-import { logger } from '../utils/logger';
+import { constructEthMethodPayload } from '../utils/ethCall.js';
+import { format } from '../utils/formatting.js';
+import { logger } from '../utils/logger.js';
 
 /**
  * erc1155 integration for managing Ethereum RPC requests related to erc1155 tokens.

@@ -1,4 +1,4 @@
-import { format } from '../../utils/formatting';
+import { format } from '../../utils/formatting.js';
 import { describe, expect, test } from '@jest/globals';
 
 describe('weiToEther', () => {

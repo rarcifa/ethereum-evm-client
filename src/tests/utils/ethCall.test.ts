@@ -1,4 +1,4 @@
-import { constructEthMethodPayload } from '../../utils/ethCall';
+import { constructEthMethodPayload } from '../../utils/ethCall.js';
 
 describe('constructEthMethodPayload', () => {
   test('constructs payload correctly with full parameters', () => {

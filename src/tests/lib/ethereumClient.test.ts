@@ -1,4 +1,4 @@
-import { createClient } from '../../lib/client/ethereumClient';
+import { createClient } from '../../lib/client/ethereumClient.js';
 
 describe('erc20 Integration Tests', () => {
   const ethereumInstance = createClient({
