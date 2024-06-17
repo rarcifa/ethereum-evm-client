@@ -6,8 +6,6 @@ The Ethereum EVM Client is a TypeScript/JavaScript library designed to facilitat
 ![ES Version](https://img.shields.io/badge/ES6-yellow)
 ![Node Version](https://img.shields.io/badge/node-16.x-green)
 
-This is a sub-package of [@rarcifa/ethereum-evm-client][repo].
-
 ## Features
 
 Simple and intuitive API for interacting with any EVM compatible blockchain.
