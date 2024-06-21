@@ -3,7 +3,6 @@ import axios, { AxiosInstance } from 'axios';
 import { erc1155 } from '../../integrations/erc1155.js';
 import { erc20 } from '../../integrations/erc20.js';
 import { erc721 } from '../../integrations/erc721.js';
-import { blockTime } from '../../utils/blockTime.js';
 
 /**
  * Configuration parameters for creating a blockchain client instance.
@@ -181,13 +180,6 @@ interface BlockchainClient {
   erc20: Erc20;
   erc721: Erc721;
   erc1155: Erc1155;
-  /**
-   * Fetches the block from a timestamp.
-   *
-   * @param {number} timestamp - The timestamp value to get the closed block from.
-   * @returns {Promise<Block>} A promise that resolves to the block numbe closest to the timestamp.
-   */
-  getBlockFromTimestamp: (timestamp: number) => Promise<Block>;
 }
 
 /**
@@ -524,29 +516,5 @@ export const createClient = ({
           instance
         ),
     },
-    /**
-     * Gets the block closest to the given timestamp.
-     *
-     * @param {number} timestamp - The timestamp to find the block for.
-     * @returns {Promise<Block>} A promise that resolves to the block closest to the given timestamp.
-     *
-     * @example
-     * const blockInstance = createBlockTimeClient({
-     *   endpoint: 'RPC_ENDPOINT'
-     * });
-     *
-     * async function getBlock() {
-     *   try {
-     *     const block = await instance.getBlockFromTimestamp(1718196040);
-     *     console.log('Block:', block);
-     *   } catch (e) {
-     *     console.error('Error fetching block:', e);
-     *   }
-     * }
-     *
-     * getBlock();
-     */
-    getBlockFromTimestamp: (timestamp: number): Promise<Block> =>
-      blockTime.getBlockFromTimestamp(timestamp, state),
   };
 };

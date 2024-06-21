@@ -13,11 +13,6 @@ export enum EthMethod {
    * Method for getting the balance of an account.
    */
   GetBalance = 'eth_getBalance',
-
-  /**
-   * Method for getting the block by number.
-   */
-  GetBlockByNumber = 'eth_getBlockByNumber',
 }
 
 /**
