@@ -1,114 +1,103 @@
-import type { AxiosInstance } from 'axios';
+import type { JsonRpcClient } from '../lib/client/jsonRpcClient.js';
+import { Erc721 } from '../lib/interfaces/ethMethods.js';
+import type { TokenId } from '../lib/interfaces/tokenId.js';
 
-import { Erc721, EthMethod } from '../lib/interfaces/ethMethods.js';
-import type { JsonRpcRequestPayload } from '../lib/interfaces/jsonRpcRequest.js';
-
-import { constructEthMethodPayload, sendEthRequest } from '../utils/ethCall.js';
 import { format } from '../utils/formatting.js';
 
 /**
- * erc721 integration for managing Ethereum RPC requests.
+ * Reads erc721 token data over JSON-RPC.
  *
- * @fileoverview This file provides helper functions for Ethereum JSON-RPC interactions for erc721 tokens.
- * @namespace erc721
+ * @fileoverview This file provides the client for Ethereum JSON-RPC interactions for erc721 tokens.
+ * @class
+ *
+ * @example
+ * const client = createClient({ endpoint: 'RPC_ENDPOINT' });
+ * const owner = await client.erc721.getOwnerOf('0xCONTRACT_ADDRESS', 'TOKEN_ID');
  */
-export const erc721 = {
+export class Erc721Client {
   /**
-   * Fetches the token balance of the erc721 token.
+   * The JSON-RPC client that sends every request.
+   */
+  readonly #rpc: JsonRpcClient;
+
+  /**
+   * Creates an erc721 client.
+   *
+   * @param {JsonRpcClient} rpc - The JSON-RPC client that sends every request.
+   */
+  constructor(rpc: JsonRpcClient) {
+    this.#rpc = rpc;
+  }
+
+  /**
+   * Fetches the number of erc721 tokens an account owns.
    *
    * @param {string} accountAddress - The account address to fetch the balance from.
-   * @param {string} contractAddress - The contract address of the erc721 instance.
-   * @param {AxiosInstance} ethereumInstance - The ethereum client to initialize the erc721 instance
+   * @param {string} contractAddress - The contract address of the erc721 token.
    * @returns {Promise<string>} The number of tokens the account owns.
+   * @throws {RpcError} When the node answers with a JSON-RPC error.
+   * @throws {Error} When an address is invalid, the request fails or the contract returns no data.
    *
    * @example
-   * const data = erc721.getBalanceOf('0xACCOUNT_ADDRESS', '0xCONTRACT_ADDRESS', ethereumInstance);
+   * const balance = await client.erc721.getBalanceOf('0xACCOUNT_ADDRESS', '0xCONTRACT_ADDRESS');
    */
-  getBalanceOf: async (
+  async getBalanceOf(
     accountAddress: string,
-    contractAddress: string,
-    ethereumInstance: AxiosInstance
-  ): Promise<string> => {
-    const data: JsonRpcRequestPayload = constructEthMethodPayload(
-      {
-        to: format.checkAddress(contractAddress),
-        data: `${Erc721.BalanceOf}${format.encodeAddress(accountAddress)}`,
-      },
-      EthMethod.Call
-    );
-
-    const result = await sendEthRequest(
-      ethereumInstance,
-      data,
+    contractAddress: string
+  ): Promise<string> {
+    const result = await this.#rpc.call(
+      contractAddress,
+      `${Erc721.BalanceOf}${format.encodeAddress(accountAddress)}`,
       'erc721/getBalanceOf'
     );
 
     return format.formatTokenAmount(result, 0);
-  },
+  }
 
   /**
    * Fetches the owner address of the erc721 token.
    *
-   * @param {string} contractAddress - The contract address of the erc721 instance.
-   * @param {string | number | bigint} tokenId - The token id, as a decimal string, a `0x` prefixed hex string, a safe integer or a bigint.
-   * @param {AxiosInstance} ethereumInstance - The ethereum client to initialize the erc721 instance
+   * @param {string} contractAddress - The contract address of the erc721 token.
+   * @param {TokenId} tokenId - The token id.
    * @returns {Promise<string>} The owner address of the token, lowercase.
+   * @throws {RpcError} When the node answers with a JSON-RPC error, such as a revert for a token that does not exist.
+   * @throws {Error} When the address or token id is invalid, the request fails or the contract returns no data.
    *
    * @example
-   * const data = erc721.getOwnerOf('0xCONTRACT_ADDRESS', 'TOKEN_ID', ethereumInstance);
+   * const owner = await client.erc721.getOwnerOf('0xCONTRACT_ADDRESS', 'TOKEN_ID');
    */
-  getOwnerOf: async (
-    contractAddress: string,
-    tokenId: string | number | bigint,
-    ethereumInstance: AxiosInstance
-  ): Promise<string> => {
-    const data: JsonRpcRequestPayload = constructEthMethodPayload(
-      {
-        to: format.checkAddress(contractAddress),
-        data: `${Erc721.OwnerOf}${format.encodeUint256(tokenId)}`,
-      },
-      EthMethod.Call
-    );
-
-    const result = await sendEthRequest(
-      ethereumInstance,
-      data,
+  async getOwnerOf(contractAddress: string, tokenId: TokenId): Promise<string> {
+    const result = await this.#rpc.call(
+      contractAddress,
+      `${Erc721.OwnerOf}${format.encodeUint256(tokenId)}`,
       'erc721/getOwnerOf'
     );
 
     return format.decodeAddress(result);
-  },
+  }
 
   /**
    * Fetches the metadata uri of the erc721 token.
    *
-   * @param {string} contractAddress - The contract address of the erc721 instance.
-   * @param {string | number | bigint} tokenId - The token id, as a decimal string, a `0x` prefixed hex string, a safe integer or a bigint.
-   * @param {AxiosInstance} ethereumInstance - The ethereum client to initialize the erc721 instance
+   * @param {string} contractAddress - The contract address of the erc721 token.
+   * @param {TokenId} tokenId - The token id.
    * @returns {Promise<string>} The uri of the token metadata, as the contract returns it.
+   * @throws {RpcError} When the node answers with a JSON-RPC error, such as a revert for a token that does not exist.
+   * @throws {Error} When the address or token id is invalid, the request fails or the contract returns no data.
    *
    * @example
-   * const data = erc721.getTokenUri('0xCONTRACT_ADDRESS', 'TOKEN_ID', ethereumInstance);
+   * const uri = await client.erc721.getTokenUri('0xCONTRACT_ADDRESS', 'TOKEN_ID');
    */
-  getTokenUri: async (
+  async getTokenUri(
     contractAddress: string,
-    tokenId: string | number | bigint,
-    ethereumInstance: AxiosInstance
-  ): Promise<string> => {
-    const data: JsonRpcRequestPayload = constructEthMethodPayload(
-      {
-        to: format.checkAddress(contractAddress),
-        data: `${Erc721.TokenURI}${format.encodeUint256(tokenId)}`,
-      },
-      EthMethod.Call
-    );
-
-    const result = await sendEthRequest(
-      ethereumInstance,
-      data,
+    tokenId: TokenId
+  ): Promise<string> {
+    const result = await this.#rpc.call(
+      contractAddress,
+      `${Erc721.TokenURI}${format.encodeUint256(tokenId)}`,
       'erc721/getTokenUri'
     );
 
     return format.decodeHexString(result);
-  },
-};
+  }
+}

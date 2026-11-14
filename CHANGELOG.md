@@ -27,8 +27,10 @@
 
 ### Added
 
+- `EthereumClient`, the class `createClient` returns. Each token standard is a class (`Erc20Client`, `Erc721Client`,
+  `Erc1155Client`) that shares one JSON-RPC client.
 - `erc20.getDecimals`.
 - `RpcError`, with the JSON-RPC error `code` and `data`.
 - The `timeout` client option, 30 seconds by default.
 - Address and token id validation before any request is sent.
-- Exported types: `BlockchainClient`, `ClientConfig`, `Erc20Client`, `Erc721Client`, `Erc1155Client`, `TokenId`.
+- Exported types: `ClientConfig`, `Erc20Client`, `Erc721Client`, `Erc1155Client`, `TokenId`.

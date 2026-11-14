@@ -1,87 +1,87 @@
-import type { AxiosInstance } from 'axios';
+import type { JsonRpcClient } from '../lib/client/jsonRpcClient.js';
+import { Erc1155 } from '../lib/interfaces/ethMethods.js';
+import type { TokenId } from '../lib/interfaces/tokenId.js';
 
-import { Erc1155, EthMethod } from '../lib/interfaces/ethMethods.js';
-import type { JsonRpcRequestPayload } from '../lib/interfaces/jsonRpcRequest.js';
-
-import { constructEthMethodPayload, sendEthRequest } from '../utils/ethCall.js';
 import { format } from '../utils/formatting.js';
 
 /**
- * erc1155 integration for managing Ethereum RPC requests related to erc1155 tokens.
+ * Reads erc1155 token data over JSON-RPC.
  *
- * @fileoverview This file provides helper functions for Ethereum JSON-RPC interactions for erc1155 tokens.
- * @namespace erc1155
+ * @fileoverview This file provides the client for Ethereum JSON-RPC interactions for erc1155 tokens.
+ * @class
+ *
+ * @example
+ * const client = createClient({ endpoint: 'RPC_ENDPOINT' });
+ * const balance = await client.erc1155.getBalanceOf('0xACCOUNT_ADDRESS', '0xCONTRACT_ADDRESS', 'TOKEN_ID');
  */
-export const erc1155 = {
+export class Erc1155Client {
   /**
-   * Fetches the token balance for a specific token ID at a given account address.
+   * The JSON-RPC client that sends every request.
+   */
+  readonly #rpc: JsonRpcClient;
+
+  /**
+   * Creates an erc1155 client.
+   *
+   * @param {JsonRpcClient} rpc - The JSON-RPC client that sends every request.
+   */
+  constructor(rpc: JsonRpcClient) {
+    this.#rpc = rpc;
+  }
+
+  /**
+   * Fetches the balance of one token id at one account address.
    *
    * @param {string} accountAddress - The account address to fetch the token balance from.
    * @param {string} contractAddress - The contract address of the erc1155 token.
-   * @param {string | number | bigint} tokenId - The token id, as a decimal string, a `0x` prefixed hex string, a safe integer or a bigint.
-   * @param {AxiosInstance} ethereumInstance - The ethereum client instance.
+   * @param {TokenId} tokenId - The token id.
    * @returns {Promise<string>} The balance of the token id at the account address.
+   * @throws {RpcError} When the node answers with a JSON-RPC error.
+   * @throws {Error} When an address or the token id is invalid, the request fails or the contract returns no data.
    *
    * @example
-   * const balance = erc1155.getBalanceOf('0xACCOUNT_ADDRESS', '0xCONTRACT_ADDRESS', 'TOKEN_ID', ethereumInstance);
+   * const balance = await client.erc1155.getBalanceOf('0xACCOUNT_ADDRESS', '0xCONTRACT_ADDRESS', 'TOKEN_ID');
    */
-  getBalanceOf: async (
+  async getBalanceOf(
     accountAddress: string,
     contractAddress: string,
-    tokenId: string | number | bigint,
-    ethereumInstance: AxiosInstance
-  ): Promise<string> => {
-    const data: JsonRpcRequestPayload = constructEthMethodPayload(
-      {
-        to: format.checkAddress(contractAddress),
-        data: `${Erc1155.BalanceOf}${format.encodeAddress(accountAddress)}${format.encodeUint256(tokenId)}`,
-      },
-      EthMethod.Call
-    );
-
-    const result = await sendEthRequest(
-      ethereumInstance,
-      data,
+    tokenId: TokenId
+  ): Promise<string> {
+    const result = await this.#rpc.call(
+      contractAddress,
+      `${Erc1155.BalanceOf}${format.encodeAddress(accountAddress)}${format.encodeUint256(tokenId)}`,
       'erc1155/getBalanceOf'
     );
 
     return format.formatTokenAmount(result, 0);
-  },
+  }
 
   /**
-   * Fetches the token balances for pairs of account address and token ID.
+   * Fetches the balances of pairs of account address and token id.
    *
    * @param {string[]} accountAddresses - The account addresses to fetch the token balances from.
    * @param {string} contractAddress - The contract address of the erc1155 token.
-   * @param {(string | number | bigint)[]} tokenIds - The token ids, one per account address.
-   * @param {AxiosInstance} ethereumInstance - The ethereum client instance.
+   * @param {TokenId[]} tokenIds - The token ids, one per account address.
    * @returns {Promise<string[]>} The balance of each pair, in the order of the arguments.
+   * @throws {RpcError} When the node answers with a JSON-RPC error.
+   * @throws {Error} When the arrays differ in length, an address or token id is invalid, the request fails or the contract returns no data.
    *
    * @example
-   * const balances = erc1155.getBalanceOfBatch(['0xACCOUNT_ADDRESS_1', '0xACCOUNT_ADDRESS_2'], '0xCONTRACT_ADDRESS', ['TOKEN_ID_1', 'TOKEN_ID_2'], ethereumInstance);
+   * const balances = await client.erc1155.getBalanceOfBatch(['0xACCOUNT_ADDRESS_1', '0xACCOUNT_ADDRESS_2'], '0xCONTRACT_ADDRESS', ['TOKEN_ID_1', 'TOKEN_ID_2']);
    */
-  getBalanceOfBatch: async (
+  async getBalanceOfBatch(
     accountAddresses: string[],
     contractAddress: string,
-    tokenIds: (string | number | bigint)[],
-    ethereumInstance: AxiosInstance
-  ): Promise<string[]> => {
-    const data: JsonRpcRequestPayload = constructEthMethodPayload(
-      {
-        to: format.checkAddress(contractAddress),
-        data: `${Erc1155.BalanceOfBatch}${format.encodeBalanceOfBatchArgs(accountAddresses, tokenIds)}`,
-      },
-      EthMethod.Call
-    );
-
-    const result = await sendEthRequest(
-      ethereumInstance,
-      data,
+    tokenIds: TokenId[]
+  ): Promise<string[]> {
+    const result = await this.#rpc.call(
+      contractAddress,
+      `${Erc1155.BalanceOfBatch}${format.encodeBalanceOfBatchArgs(accountAddresses, tokenIds)}`,
       'erc1155/getBalanceOfBatch'
     );
 
     return format
       .decodeUint256Array(result)
       .map((balance) => balance.toString());
-  },
-};
+  }
+}

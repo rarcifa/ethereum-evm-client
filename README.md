@@ -41,6 +41,11 @@ const client = createClient({
 });
 ```
 
+`createClient(config)` is the same as `new EthereumClient(config)`. The client has one property per token standard:
+`client.erc20`, `client.erc721` and `client.erc1155`. Their methods are class methods, so call them on the client
+(`client.erc20.getName(address)`); to pass one as a callback, bind it first
+(`client.erc20.getName.bind(client.erc20)`).
+
 ### ERC20
 
 ```ts
@@ -91,6 +96,9 @@ try {
 The client never logs: every failure is thrown to the caller.
 
 ## API
+
+Exported: `createClient`, `EthereumClient`, `RpcError`, and the types `ClientConfig`, `Erc20Client`, `Erc721Client`,
+`Erc1155Client` and `TokenId`.
 
 Addresses are `0x` prefixed, 20-byte hex strings. Token ids (`TokenId`) can be a decimal string (`'6522'`), a `0x`
 prefixed hex string (`'0x197a'`), a safe integer or a `bigint`. Amounts are returned as exact decimal strings.

@@ -1,11 +1,7 @@
-import type { AxiosInstance } from 'axios';
-
-import { RpcError } from '../lib/errors.js';
 import type {
   JsonRpcRequestPayload,
   RpcParams,
 } from '../lib/interfaces/jsonRpcRequest.js';
-import type { JsonRpcResponse } from '../lib/interfaces/jsonRpcResponse.js';
 
 /**
  * This function creates the payload necessary for making JSON-RPC calls such as `eth_call`.
@@ -37,54 +33,4 @@ export const constructEthMethodPayload = (
     params: [params, tag],
     id,
   };
-};
-
-/**
- * Sends a JSON-RPC request and returns its result.
- *
- * @param {AxiosInstance} ethereumInstance - The ethereum client used to send the request.
- * @param {JsonRpcRequestPayload} data - The JSON-RPC payload, built with `constructEthMethodPayload`.
- * @param {string} context - The method sending the request, such as `erc20/getName`. Every error message starts with it.
- * @returns {Promise<string>} The result of the request.
- * @throws {RpcError} When the node answers with a JSON-RPC error.
- * @throws {Error} When the request fails, or the node returns no result (`0x` for a call to an address without code).
- *
- * @example
- * const result = await sendEthRequest(ethereumInstance, data, 'erc20/getName');
- */
-export const sendEthRequest = async (
-  ethereumInstance: AxiosInstance,
-  data: JsonRpcRequestPayload,
-  context: string
-): Promise<string> => {
-  let response: JsonRpcResponse<string>;
-
-  try {
-    ({ data: response } = await ethereumInstance.post<JsonRpcResponse<string>>(
-      '',
-      data
-    ));
-  } catch (e) {
-    const reason = e instanceof Error ? e.message : String(e);
-    throw new Error(`[${context}] error: ${reason}`, { cause: e });
-  }
-
-  if (response.error) {
-    throw new RpcError(
-      context,
-      response.error.code,
-      response.error.message,
-      response.error.data
-    );
-  }
-
-  if (
-    response.result === undefined ||
-    response.result === null ||
-    response.result === '0x'
-  ) {
-    throw new Error(`[${context}] error: No result returned`);
-  }
-
-  return response.result;
 };

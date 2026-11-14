@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from '@jest/globals';
 
-import { RpcError, createClient } from '../../index.js';
+import { EthereumClient, RpcError, createClient } from '../../index.js';
 import {
   abiString,
   callData,
@@ -225,6 +225,16 @@ describe('erc1155', () => {
 });
 
 describe('client', () => {
+  it('creates the same client with createClient and new EthereumClient', async () => {
+    const { server } = await setup(() => ({ result: abiString('USDT') }));
+    const client = new EthereumClient({ endpoint: server.url });
+
+    expect(createClient({ endpoint: server.url })).toBeInstanceOf(
+      EthereumClient
+    );
+    await expect(client.erc20.getSymbol(TOKEN)).resolves.toBe('USDT');
+  });
+
   it('sends the api key as a bearer token', async () => {
     const { client, server } = await setup(() => ({ result: '0x0' }), 'k3y');
 

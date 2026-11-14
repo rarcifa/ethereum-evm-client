@@ -1,7 +1,28 @@
+import type { TokenId } from '../lib/interfaces/tokenId.js';
+
+/**
+ * Length of one 32-byte ABI word, in hex digits.
+ */
 const WORD_LENGTH = 64;
+
+/**
+ * Largest value of a `uint256`.
+ */
 const MAX_UINT256 = (1n << 256n) - 1n;
+
+/**
+ * A `0x` prefixed, 20-byte hex address, in any letter case.
+ */
 const ADDRESS_PATTERN = /^0x[0-9a-fA-F]{40}$/;
+
+/**
+ * A `0x` prefixed hex string, possibly empty.
+ */
 const HEX_PATTERN = /^0x[0-9a-fA-F]*$/;
+
+/**
+ * A non-negative decimal integer.
+ */
 const DECIMAL_PATTERN = /^[0-9]+$/;
 
 /**
@@ -9,6 +30,9 @@ const DECIMAL_PATTERN = /^[0-9]+$/;
  *
  * @param {string} hexString - The hex string.
  * @returns {string} The hex digits without the prefix.
+ *
+ * @example
+ * const digits = strip0x('0x2a'); // '2a'
  */
 const strip0x = (hexString: string): string =>
   hexString.startsWith('0x') ? hexString.slice(2) : hexString;
@@ -18,6 +42,9 @@ const strip0x = (hexString: string): string =>
  *
  * @param {string} hexData - The hex digits, without the `0x` prefix.
  * @returns {string} The decoded text.
+ *
+ * @example
+ * const text = hexToUtf8('55534454'); // 'USDT'
  */
 const hexToUtf8 = (hexData: string): string => {
   const bytes = new Uint8Array(hexData.length / 2);
@@ -33,6 +60,10 @@ const hexToUtf8 = (hexData: string): string => {
  * @param {string} hexData - The ABI encoded data, without the `0x` prefix.
  * @param {number} byteOffset - The byte offset of the word.
  * @returns {bigint} The word as a number.
+ * @throws {Error} When the data ends before the word does.
+ *
+ * @example
+ * const length = readWord(hexData, 32);
  */
 const readWord = (hexData: string, byteOffset: number): bigint => {
   const word = hexData.slice(byteOffset * 2, byteOffset * 2 + WORD_LENGTH);
@@ -56,6 +87,7 @@ export const format = {
    * @param {string | number | bigint} tokenAmount - The amount in the smallest unit, as a hex string, a decimal string, a safe integer or a bigint.
    * @param {number} decimals - The number of decimals the token uses.
    * @returns {string} The formatted amount, such as `1234.5`.
+   * @throws {Error} When the amount is not a non-negative integer, or the decimals are not an integer from 0 to 255.
    *
    * @example
    * const data = format.formatTokenAmount('0xRETURNED_VALUE', DECIMAL_VALUE);
@@ -112,6 +144,7 @@ export const format = {
    *
    * @param {string | number | bigint} weiValue - The value in Wei, as a hex string, a safe integer or a bigint.
    * @returns {string} The value in Ether, such as `1.5`.
+   * @throws {Error} When a string value is not `0x` prefixed hex, or the value is not a non-negative integer.
    *
    * @example
    * const data = format.weiToEther('0xRETURNED_VALUE');
@@ -132,6 +165,7 @@ export const format = {
    *
    * @param {string} hexString - The ABI encoded result.
    * @returns {string} The decoded UTF-8 string.
+   * @throws {Error} When the data is shorter than its offset and length say.
    *
    * @example
    * const data = format.decodeHexString('0xRETURNED_VALUE');
@@ -160,6 +194,7 @@ export const format = {
    *
    * @param {string} hexString - The ABI encoded result.
    * @returns {string} The address, lowercase and `0x` prefixed.
+   * @throws {Error} When the data is shorter than one word.
    *
    * @example
    * const data = format.decodeAddress('0xRETURNED_VALUE');
@@ -174,6 +209,7 @@ export const format = {
    *
    * @param {string} hexString - The ABI encoded result.
    * @returns {bigint[]} The decoded numbers.
+   * @throws {Error} When the data is shorter than its offset and length say.
    *
    * @example
    * const data = format.decodeUint256Array('0xRETURNED_VALUE');
@@ -193,6 +229,7 @@ export const format = {
    *
    * @param {string} address - The `0x` prefixed address.
    * @returns {string} The encoded word, without the `0x` prefix.
+   * @throws {Error} When the address is not a `0x` prefixed, 20-byte hex address.
    *
    * @example
    * const data = format.encodeAddress('0xACCOUNT_ADDRESS');
@@ -210,13 +247,14 @@ export const format = {
   /**
    * Encodes an unsigned integer, such as a token id, as one 32-byte ABI word.
    *
-   * @param {string | number | bigint} value - The value, as a decimal string, a `0x` prefixed hex string, a safe integer or a bigint.
+   * @param {TokenId} value - The value, as a decimal string, a `0x` prefixed hex string, a safe integer or a bigint.
    * @returns {string} The encoded word, without the `0x` prefix.
+   * @throws {Error} When the value is malformed, negative or larger than a `uint256`.
    *
    * @example
    * const data = format.encodeUint256('6522');
    */
-  encodeUint256: (value: string | number | bigint): string => {
+  encodeUint256: (value: TokenId): string => {
     const valid =
       typeof value === 'bigint' ||
       (typeof value === 'number' && Number.isSafeInteger(value)) ||
@@ -239,15 +277,16 @@ export const format = {
    * Encodes the arguments of `balanceOfBatch(address[], uint256[])`: two dynamic arrays of the same length.
    *
    * @param {string[]} accountAddresses - The account addresses.
-   * @param {(string | number | bigint)[]} tokenIds - The token ids, one per account address.
+   * @param {TokenId[]} tokenIds - The token ids, one per account address.
    * @returns {string} The encoded arguments, without the `0x` prefix.
+   * @throws {Error} When the arrays differ in length, or an address or token id is invalid.
    *
    * @example
    * const data = format.encodeBalanceOfBatchArgs(['0xACCOUNT_ADDRESS_1', '0xACCOUNT_ADDRESS_2'], ['TOKEN_ID_1', 'TOKEN_ID_2']);
    */
   encodeBalanceOfBatchArgs: (
     accountAddresses: string[],
-    tokenIds: (string | number | bigint)[]
+    tokenIds: TokenId[]
   ): string => {
     if (accountAddresses.length !== tokenIds.length) {
       throw new Error(
@@ -276,6 +315,7 @@ export const format = {
    *
    * @param {string} address - The address to check.
    * @returns {string} The address, unchanged.
+   * @throws {Error} When the address is not a `0x` prefixed, 20-byte hex address.
    *
    * @example
    * const to = format.checkAddress('0xCONTRACT_ADDRESS');

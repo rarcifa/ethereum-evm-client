@@ -2,8 +2,10 @@
  * Error thrown when the JSON-RPC node answers a request with an error object.
  *
  * @fileoverview This file provides the error types thrown by the client.
+ * @class
+ * @extends Error
  * @property {number} code - The JSON-RPC error code returned by the node.
- * @property {unknown} data - Optional. Additional error data returned by the node, such as revert data.
+ * @property {unknown} [data] - Optional. Additional error data returned by the node, such as revert data.
  *
  * @example
  * try {
@@ -15,7 +17,14 @@
  * }
  */
 export class RpcError extends Error {
+  /**
+   * The JSON-RPC error code returned by the node.
+   */
   readonly code: number;
+
+  /**
+   * Additional error data returned by the node, such as revert data.
+   */
   readonly data?: unknown;
 
   /**

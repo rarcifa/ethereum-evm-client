@@ -15,8 +15,9 @@ export interface JsonRpcRequestPayload {
 }
 
 /**
- * Type representing the parameters that can be passed to an RPC call.
+ * Type representing the first parameter of an RPC call: a call object targeting a contract with call data, or an
+ * account address.
  *
- * @type Parameters when targeting a specific contract with call data, or an account address.
+ * @typedef {{ to: string, data: string } | string} RpcParams
  */
 export type RpcParams = { to: string; data: string } | string;

@@ -50,6 +50,7 @@ export enum Erc20 {
    * Selector for `transfer` function to transfer tokens to a specified account.
    */
   Transfer = '0xa9059cbb',
+
   /**
    * Selector for `approve` function to allow a spender to withdraw up to the specified amount of tokens.
    */
@@ -86,6 +87,7 @@ export enum Erc721 {
    * Selector for `tokenURI` function to get the URI for a token's metadata.
    */
   TokenURI = '0xc87b56dd',
+
   /**
    * Selector for `approve` function to approve another address to transfer the ownership of a specific NFT.
    */
