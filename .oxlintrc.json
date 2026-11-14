@@ -35,12 +35,6 @@
       "env": {
         "jest": true
       }
-    },
-    {
-      "files": ["scripts/**"],
-      "rules": {
-        "no-console": "off"
-      }
     }
   ],
   "ignorePatterns": ["dist", "coverage"]

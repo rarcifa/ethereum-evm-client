@@ -148,7 +148,7 @@ prefixed hex string (`'0x197a'`), a safe integer or a `bigint`. Amounts are retu
 
 ```bash
 npm ci
-npm run check # format, lint, typecheck, tests and the package smoke test
+npm run check # format, lint, typecheck, tests and the package checks
 ```
 
 | Script                 | What it does                                                    |
@@ -158,7 +158,7 @@ npm run check # format, lint, typecheck, tests and the package smoke test
 | `npm run lint`         | Oxlint with type-aware rules (tsgolint)                         |
 | `npm run typecheck`    | TypeScript type check                                           |
 | `npm run format`       | Formats the repository with Prettier                            |
-| `npm run test:package` | Builds and imports the package by name, with ESM and CommonJS   |
+| `npm run test:package` | Builds, then checks the package with `publint` and `attw`       |
 
 ## Contributing
 
