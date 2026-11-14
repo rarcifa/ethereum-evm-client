@@ -2,13 +2,12 @@
   "compilerOptions": {
     "target": "ESNext",
     "module": "CommonJS",
-    "baseUrl": ".",
     "paths": {
-      "@/*": ["src/*"]
+      "@/*": ["./src/*"]
     },
-    "moduleResolution": "Node",
+    "rootDir": "src",
     "outDir": "dist",
-    "importsNotUsedAsValues": "remove",
+    "types": ["node", "jest"],
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
     "strict": true,
@@ -17,8 +16,13 @@
     "experimentalDecorators": true,
     "emitDecoratorMetadata": true,
     "strictNullChecks": false,
-    "jsx": "react",
+    "jsx": "react"
   },
   "exclude": ["node_modules"],
-  "include": ["src/**/*.ts", "src/stories/Typography/Typography.stories.ts", "src/stories/Card/Card.stories.tsx", "src/stories/Button/Button.stories.ts"]
+  "include": [
+    "src/**/*.ts",
+    "src/stories/Typography/Typography.stories.ts",
+    "src/stories/Card/Card.stories.tsx",
+    "src/stories/Button/Button.stories.ts"
+  ]
 }

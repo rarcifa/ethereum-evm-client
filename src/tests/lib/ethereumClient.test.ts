@@ -34,7 +34,7 @@ const encodeUint = (value: bigint): string =>
  * @returns {object} The client and the stubbed post function.
  */
 const stubClient = (...results: string[]) => {
-  const post = jest.fn<Promise<unknown>, [string, any]>();
+  const post = jest.fn<(url: string, body: any) => Promise<unknown>>();
   for (const result of results) {
     post.mockResolvedValueOnce({ data: { jsonrpc: '2.0', id: 1, result } });
   }
