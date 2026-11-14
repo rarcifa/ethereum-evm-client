@@ -1,185 +1,277 @@
-import axios, { AxiosInstance } from 'axios';
-import { afterEach, describe, expect, it, jest } from '@jest/globals';
+import { afterEach, describe, expect, it } from '@jest/globals';
 
-import { createClient } from '../../lib/client/ethereumClient.js';
+import { RpcError, createClient } from '../../index.js';
+import {
+  abiString,
+  callData,
+  callTarget,
+  startRpcServer,
+  word,
+} from '../helpers/rpcServer.js';
+import type { RpcHandler, RpcServer } from '../helpers/rpcServer.js';
+
+const ACCOUNT = '0x18cF36D6925026f00A57754757Ecd480B92cBefC';
+const OTHER_ACCOUNT = '0x0000000000000000000000000000000000c0ffee';
+const TOKEN = '0xdAC17F958D2ee523a2206206994597C13D831ec7';
+const DECIMALS = '0x313ce567';
+
+let activeServer: RpcServer | undefined;
 
 /**
- * Encodes a string as an ABI `string` return value: offset, length, data.
+ * Starts a JSON-RPC server with the handler and returns a client for it.
  *
- * @param {string} value - The string to encode.
- * @returns {string} The ABI encoded hex string.
+ * @param {RpcHandler} handler - Builds the answer of each request.
+ * @param {string} [apiKey] - Optional. The api key of the client.
+ * @returns {Promise<object>} The client and the server.
  */
-const encodeString = (value: string): string => {
-  const hex = Buffer.from(value, 'utf8').toString('hex');
-  const offset = (32).toString(16).padStart(64, '0');
-  const length = value.length.toString(16).padStart(64, '0');
-  const data = hex.padEnd(Math.ceil(hex.length / 64) * 64, '0');
-  return `0x${offset}${length}${data}`;
+const setup = async (handler: RpcHandler, apiKey?: string) => {
+  activeServer = await startRpcServer(handler);
+  return {
+    client: createClient({ endpoint: activeServer.url, apiKey }),
+    server: activeServer,
+  };
 };
 
 /**
- * Encodes a number as a single ABI `uint256` word.
+ * Answers `decimals()` with the given decimals and every other call with the result.
  *
- * @param {bigint} value - The number to encode.
- * @returns {string} The ABI encoded hex string.
+ * @param {number} decimals - The decimals of the token.
+ * @param {string} result - The result of every other call.
+ * @returns {RpcHandler} The handler.
  */
-const encodeUint = (value: bigint): string =>
-  `0x${value.toString(16).padStart(64, '0')}`;
+const tokenHandler =
+  (decimals: number, result: string): RpcHandler =>
+  (body) => {
+    const [params] = body.params;
+    const data = typeof params === 'string' ? '' : params.data;
+    return { result: data === DECIMALS ? word(BigInt(decimals)) : result };
+  };
 
-/**
- * Creates a client whose RPC endpoint answers with the given results, in
- * order, without any network access.
- *
- * @param {string[]} results - The JSON-RPC results to return, one per call.
- * @returns {object} The client and the stubbed post function.
- */
-const stubClient = (...results: string[]) => {
-  const post = jest.fn<(url: string, body: any) => Promise<unknown>>();
-  for (const result of results) {
-    post.mockResolvedValueOnce({ data: { jsonrpc: '2.0', id: 1, result } });
-  }
-  jest
-    .spyOn(axios, 'create')
-    .mockReturnValue({ post } as unknown as AxiosInstance);
-  const client = createClient({ endpoint: 'http://rpc.invalid' });
-  return { client, post };
-};
-
-afterEach(() => {
-  jest.restoreAllMocks();
+afterEach(async () => {
+  await activeServer?.close();
+  activeServer = undefined;
 });
 
-describe('erc20 Integration Tests', () => {
-  it('successfully fetches account balance', async () => {
-    const { client, post } = stubClient('0xde0b6b3a7640000');
+describe('erc20', () => {
+  it('fetches the native balance of an account in Ether, exactly', async () => {
+    const { client, server } = await setup(() => ({
+      result: `0x${123456789123456789123n.toString(16)}`,
+    }));
 
-    const balance = await client.erc20.getBalance(
-      '0x18cF36D6925026f00A57754757Ecd480B92cBefC'
+    await expect(client.erc20.getBalance(ACCOUNT)).resolves.toBe(
+      '123.456789123456789123'
     );
-
-    expect(balance).toBe('1.000000000000000000');
-    expect(post.mock.calls[0][1]).toMatchObject({
+    expect(server.requests[0].body).toMatchObject({
       method: 'eth_getBalance',
-      params: ['0x18cF36D6925026f00A57754757Ecd480B92cBefC', 'latest'],
+      params: [ACCOUNT, 'latest'],
     });
   });
 
-  it('successfully fetches erc20 balance', async () => {
-    const { client, post } = stubClient(encodeUint(2n * 10n ** 18n));
+  it('formats a token balance with the decimals of the token', async () => {
+    const { client, server } = await setup(tokenHandler(6, word(1234567n)));
 
-    const balanceOf = await client.erc20.getBalanceOf(
-      '0xe45E12B44fCa87e42dbC63A67bF5AA8aB800f459',
-      '0x95aD61b0a150d79219dCF64E1E6Cc01f0B64C4cE'
+    await expect(client.erc20.getBalanceOf(ACCOUNT, TOKEN)).resolves.toBe(
+      '1.234567'
+    );
+    const balanceCall = server.requests.find((r) => callData(r) !== DECIMALS);
+    expect(balanceCall && callTarget(balanceCall)).toBe(TOKEN);
+    expect(balanceCall && callData(balanceCall)).toBe(
+      `0x70a08231${ACCOUNT.slice(2).toLowerCase().padStart(64, '0')}`
+    );
+  });
+
+  it('keeps every digit of large 18-decimal balances', async () => {
+    const { client } = await setup(
+      tokenHandler(18, word(123456789012345678901234567890n))
     );
 
-    expect(balanceOf).toBe('2.000000000000000000');
-    expect(post.mock.calls[0][1].method).toBe('eth_call');
-    expect(post.mock.calls[0][1].params[0]).toEqual({
-      to: '0x95aD61b0a150d79219dCF64E1E6Cc01f0B64C4cE',
-      data:
-        '0x70a08231' +
-        'e45E12B44fCa87e42dbC63A67bF5AA8aB800f459'.padStart(64, '0'),
+    await expect(client.erc20.getBalanceOf(ACCOUNT, TOKEN)).resolves.toBe(
+      '123456789012.34567890123456789'
+    );
+  });
+
+  it('fetches the decimals of a token', async () => {
+    const { client } = await setup(tokenHandler(6, word(0n)));
+
+    await expect(client.erc20.getDecimals(TOKEN)).resolves.toBe(6);
+  });
+
+  it('decodes the name and symbol of a token', async () => {
+    const { client } = await setup((body) => {
+      const [params] = body.params;
+      const data = typeof params === 'string' ? '' : params.data;
+      return {
+        result: abiString(data === '0x06fdde03' ? 'Tether USD' : 'USDT'),
+      };
+    });
+
+    await expect(client.erc20.getName(TOKEN)).resolves.toBe('Tether USD');
+    await expect(client.erc20.getSymbol(TOKEN)).resolves.toBe('USDT');
+  });
+
+  it('decodes a bytes32 symbol', async () => {
+    const { client } = await setup(() => ({
+      result: `0x${Buffer.from('MKR').toString('hex').padEnd(64, '0')}`,
+    }));
+
+    await expect(client.erc20.getSymbol(TOKEN)).resolves.toBe('MKR');
+  });
+
+  it('formats the total supply with the decimals of the token', async () => {
+    const { client } = await setup(tokenHandler(2, word(1234567n)));
+
+    await expect(client.erc20.getTotalSupply(TOKEN)).resolves.toBe('12345.67');
+  });
+});
+
+describe('erc721', () => {
+  it('fetches the number of tokens an account owns', async () => {
+    const { client, server } = await setup(() => ({ result: word(3n) }));
+
+    await expect(client.erc721.getBalanceOf(ACCOUNT, TOKEN)).resolves.toBe('3');
+    expect(callData(server.requests[0]).slice(0, 10)).toBe('0x70a08231');
+  });
+
+  it('encodes a decimal token id as a number', async () => {
+    const { client, server } = await setup(() => ({
+      result: word(BigInt(OTHER_ACCOUNT)),
+    }));
+
+    await expect(client.erc721.getOwnerOf(TOKEN, '6522')).resolves.toBe(
+      OTHER_ACCOUNT
+    );
+    expect(callData(server.requests[0])).toBe(
+      `0x6352211e${(6522).toString(16).padStart(64, '0')}`
+    );
+  });
+
+  it('accepts hex, number and bigint token ids', async () => {
+    const { client, server } = await setup(() => ({
+      result: word(BigInt(ACCOUNT)),
+    }));
+
+    await client.erc721.getOwnerOf(TOKEN, '0x197a');
+    await client.erc721.getOwnerOf(TOKEN, 6522);
+    await client.erc721.getOwnerOf(TOKEN, 6522n);
+
+    const encoded = (6522).toString(16).padStart(64, '0');
+    expect(server.requests.map((r) => callData(r).slice(10))).toEqual([
+      encoded,
+      encoded,
+      encoded,
+    ]);
+  });
+
+  it('returns the token uri without fetching it', async () => {
+    const { client, server } = await setup(() => ({
+      result: abiString('ipfs://bafy/6522.json'),
+    }));
+
+    await expect(client.erc721.getTokenUri(TOKEN, '6522')).resolves.toBe(
+      'ipfs://bafy/6522.json'
+    );
+    expect(server.requests).toHaveLength(1);
+  });
+});
+
+describe('erc1155', () => {
+  it('fetches the balance of one token id', async () => {
+    const { client, server } = await setup(() => ({ result: word(5n) }));
+
+    await expect(
+      client.erc1155.getBalanceOf(ACCOUNT, TOKEN, '4')
+    ).resolves.toBe('5');
+    expect(callData(server.requests[0])).toBe(
+      `0x00fdd58e${ACCOUNT.slice(2).toLowerCase().padStart(64, '0')}${word(4n).slice(2)}`
+    );
+  });
+
+  it('ABI encodes balanceOfBatch and returns one balance per pair', async () => {
+    const { client, server } = await setup(() => ({
+      result: `${word(32n)}${word(2n).slice(2)}${word(7n).slice(2)}${word(9n).slice(2)}`,
+    }));
+
+    await expect(
+      client.erc1155.getBalanceOfBatch([ACCOUNT, OTHER_ACCOUNT], TOKEN, [
+        '1',
+        '2',
+      ])
+    ).resolves.toEqual(['7', '9']);
+
+    const args = callData(server.requests[0]).slice(10);
+    const words = args.match(/.{64}/g)?.map((w) => BigInt(`0x${w}`));
+    expect(words).toEqual([
+      64n,
+      160n,
+      2n,
+      BigInt(ACCOUNT),
+      BigInt(OTHER_ACCOUNT),
+      2n,
+      1n,
+      2n,
+    ]);
+  });
+
+  it('rejects arrays of different lengths before sending', async () => {
+    const { client, server } = await setup(() => ({ result: word(0n) }));
+
+    await expect(
+      client.erc1155.getBalanceOfBatch([ACCOUNT], TOKEN, ['1', '2'])
+    ).rejects.toThrow(
+      '[format/encodeBalanceOfBatchArgs] error: Address and Token IDs arrays must be of the same length'
+    );
+    expect(server.requests).toHaveLength(0);
+  });
+});
+
+describe('client', () => {
+  it('sends the api key as a bearer token', async () => {
+    const { client, server } = await setup(() => ({ result: '0x0' }), 'k3y');
+
+    await client.erc20.getBalance(ACCOUNT);
+
+    expect(server.requests[0].headers.authorization).toBe('Bearer k3y');
+  });
+
+  it('throws an RpcError with the code of a JSON-RPC error', async () => {
+    const { client } = await setup(() => ({
+      error: { code: -32000, message: 'execution reverted' },
+    }));
+
+    const error = await client.erc20.getName(TOKEN).catch((e: unknown) => e);
+
+    expect(error).toBeInstanceOf(RpcError);
+    expect(error).toMatchObject({
+      code: -32000,
+      message: '[erc20/getName] error: execution reverted',
     });
   });
 
-  it('successfully fetches erc20 name', async () => {
-    const { client } = stubClient(encodeString('Tether USD'));
+  it('throws when a call returns no data', async () => {
+    const { client } = await setup(() => ({ result: '0x' }));
 
-    const name = await client.erc20.getName(
-      '0xdAC17F958D2ee523a2206206994597C13D831ec7'
+    await expect(client.erc20.getName(TOKEN)).rejects.toThrow(
+      '[erc20/getName] error: No result returned'
     );
-
-    expect(name).toBe('Tether USD');
   });
 
-  it('successfully fetches erc20 symbol', async () => {
-    const { client } = stubClient(encodeString('USDT'));
+  it('rejects an invalid address before sending', async () => {
+    const { client, server } = await setup(() => ({ result: word(0n) }));
 
-    const symbol = await client.erc20.getSymbol(
-      '0xdAC17F958D2ee523a2206206994597C13D831ec7'
+    await expect(client.erc721.getBalanceOf('0x123', TOKEN)).rejects.toThrow(
+      '[format/encodeAddress] error: Invalid address: 0x123'
     );
-
-    expect(symbol).toBe('USDT');
+    await expect(client.erc20.getName('not-an-address')).rejects.toThrow(
+      '[format/checkAddress] error: Invalid address: not-an-address'
+    );
+    expect(server.requests).toHaveLength(0);
   });
 
-  it('successfully fetches erc20 total supply', async () => {
-    const { client } = stubClient(encodeUint(1234567n * 10n ** 17n));
+  it('reports a failed request with the method that sent it', async () => {
+    const client = createClient({ endpoint: 'http://127.0.0.1:1' });
 
-    const totalSupply = await client.erc20.getTotalSupply(
-      '0xdAC17F958D2ee523a2206206994597C13D831ec7'
+    await expect(client.erc20.getBalance(ACCOUNT)).rejects.toThrow(
+      /^\[erc20\/getBalance\] error: /
     );
-
-    expect(totalSupply).toBe('123,456.7');
-  });
-});
-
-describe('erc721 Integration Tests', () => {
-  it('successfully fetches erc721 balance', async () => {
-    const { client } = stubClient(encodeUint(3n));
-
-    const balanceOf = await client.erc721.getBalanceOf(
-      '0x18cF36D6925026f00A57754757Ecd480B92cBefC',
-      '0x60E4d786628Fea6478F785A6d7e704777c86a7c6'
-    );
-
-    expect(balanceOf).toBe('3');
-  });
-
-  it('successfully fetches erc721 ownerOf', async () => {
-    const { client } = stubClient(
-      '0x00000000000000000000000018cf36d6925026f00a57754757ecd480b92cbefc'
-    );
-
-    const ownerOf = await client.erc721.getOwnerOf(
-      '0x60E4d786628Fea6478F785A6d7e704777c86a7c6',
-      '6522'
-    );
-
-    expect(ownerOf).toBe('0x18cf36d6925026f00a57754757ecd480b92cbefc');
-  });
-
-  it('successfully fetches erc721 uri', async () => {
-    const { client } = stubClient(
-      encodeString('https://metadata.invalid/6522')
-    );
-    const metadata = { name: 'Token #6522' };
-    const get = jest.spyOn(axios, 'get').mockResolvedValue({ data: metadata });
-
-    const uri = await client.erc721.getTokenUri(
-      '0x60E4d786628Fea6478F785A6d7e704777c86a7c6',
-      '6522'
-    );
-
-    expect(get).toHaveBeenCalledWith('https://metadata.invalid/6522');
-    expect(uri).toBe(JSON.stringify(metadata));
-  });
-});
-
-describe('erc1155 Integration Tests', () => {
-  it('successfully fetches erc1155 balance', async () => {
-    const { client } = stubClient(encodeUint(5n));
-
-    const balanceOf = await client.erc1155.getBalanceOf(
-      '0xA45cd9A7685cD9926e59C14305E3Af275F280949',
-      '0xA45cd9A7685cD9926e59C14305E3Af275F280949',
-      '4'
-    );
-
-    expect(balanceOf).toBe('5');
-  });
-
-  it('successfully fetches erc1155 balance of batch', async () => {
-    const { client } = stubClient(encodeUint(7n));
-
-    const balanceOfBatch = await client.erc1155.getBalanceOfBatch(
-      [
-        '0x990aef1085b2f6480a94bba53cbc03215d321e25',
-        '0x9cd14e32E3B1AAf35D61EBD9066Ef8e3B06b23ad',
-      ],
-      '0xdc4aff511e1b94677142a43df90f948f9ae181dd',
-      ['1', '2']
-    );
-
-    expect(balanceOfBatch).toBe('7');
   });
 });

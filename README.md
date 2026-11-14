@@ -1,98 +1,142 @@
 # Ethereum EVM Client
 
-The Ethereum EVM Client is a TypeScript/JavaScript library designed to facilitate easy and efficient interactions with any Ethereum Virtual Machine (EVM) combatible blockchain. This client library provides methods to interact with ERC20, ERC721 and ERC1155 tokens as well as other utilities, allowing developers to fetch balances, token metadata, and perform other contract interactions seamlessly.
-
+[![CI](https://github.com/rarcifa/ethereum-evm-client/actions/workflows/ci.yml/badge.svg)](https://github.com/rarcifa/ethereum-evm-client/actions/workflows/ci.yml)
 ![npm](https://img.shields.io/npm/v/@rarcifa/ethereum-evm-client)
-![ES Version](https://img.shields.io/badge/ES6-yellow)
-![Node Version](https://img.shields.io/badge/node-16.x-green)
+![Node Version](https://img.shields.io/badge/node-%3E%3D22-green)
+![License](https://img.shields.io/badge/license-MIT-blue)
+
+A small TypeScript client for reading ERC20, ERC721 and ERC1155 token data from Ethereum and any other EVM compatible
+chain over JSON-RPC.
 
 ## Features
 
-Simple and intuitive API for interacting with any EVM compatible blockchain.
-Supports both ERC20, ERC721, and ERC1155 token standards.
-Configurable client instances tailored to your specific blockchain endpoint and security needs.
+- One client per RPC endpoint, with an optional API key, extra headers and a request timeout.
+- ERC20, ERC721 and ERC1155 reads, with ABI encoding and decoding built in.
+- Exact amounts: balances are computed with `bigint` and returned as decimal strings, using the decimals of the
+  token.
+- Typed API and errors: every error message names the method that failed, and node errors are `RpcError`s with the
+  JSON-RPC error code.
 
 ## Installation
 
-To install the package, run the following command in your project directory:
-
 ```bash
-npm i @rarcifa/ethereum-evm-client
+npm install @rarcifa/ethereum-evm-client
 ```
+
+The package is ESM only and needs Node.js 22 or newer. `require()` works on the Node.js versions that can load ES
+modules from CommonJS.
 
 ## Usage
 
-Here’s how you can use the Ethereum EVM Client in your project:
-
-### Configuring the Client
+### Configuring the client
 
 ```ts
-import { createClient } from '@rarcifa/ethereum-evm-clien';
+import { createClient } from '@rarcifa/ethereum-evm-client';
 
 const client = createClient({
-  endpoint: 'CUSTOM_RPC_ENDPOINT', // evm rpc endpoint
-  apiKey: 'OPPTIONAL_API_KEY', // optional
+  endpoint: 'https://RPC_ENDPOINT', // EVM JSON-RPC endpoint
+  apiKey: 'OPTIONAL_API_KEY', // optional, sent as a bearer token
+  additionalHeaders: {}, // optional
+  timeout: 30_000, // optional, in milliseconds
 });
 ```
 
-### Fetching ERC20 Token Balance
+### ERC20
 
 ```ts
-const fetchErc20Balance = async (accountAddress, contractAddress) => {
-  try {
-    const balance = await client.erc20.getBalanceOf(
-      accountAddress,
-      contractAddress
-    );
-    console.log('ERC20 Token Balance:', balance);
-  } catch (error) {
-    console.error('Error fetching ERC20 balance:', error);
-  }
-};
+const balance = await client.erc20.getBalanceOf(
+  '0xACCOUNT_ADDRESS',
+  '0xCONTRACT_ADDRESS'
+);
+
+console.log('ERC20 balance:', balance); // e.g. '1234.5', using the decimals of the token
 ```
 
-### Interacting with Erc721 Tokens
+### ERC721
 
 ```ts
-const fetchErc721Owner = async (contractAddress) => {
-  try {
-    const owner = await client.erc721.getOwnerOf(contractAddress);
-    console.log('NFT Owner Address:', owner);
-  } catch (error) {
-    console.error('Error fetching Erc721 owner:', error);
-  }
-};
+const owner = await client.erc721.getOwnerOf('0xCONTRACT_ADDRESS', '6522');
+
+console.log('NFT owner:', owner);
 ```
+
+### ERC1155
+
+```ts
+const balances = await client.erc1155.getBalanceOfBatch(
+  ['0xACCOUNT_ADDRESS_1', '0xACCOUNT_ADDRESS_2'],
+  '0xCONTRACT_ADDRESS',
+  ['1', '2']
+);
+
+console.log('Balances:', balances); // e.g. ['7', '9']
+```
+
+### Errors
+
+```ts
+import { RpcError } from '@rarcifa/ethereum-evm-client';
+
+try {
+  await client.erc20.getName('0xCONTRACT_ADDRESS');
+} catch (e) {
+  if (e instanceof RpcError) {
+    console.error('Node error', e.code, e.message); // '[erc20/getName] error: ...'
+  } else {
+    console.error(e); // invalid input, network failure or empty result
+  }
+}
+```
+
+The client never logs: every failure is thrown to the caller.
 
 ## API
 
-### Erc20 Methods
+Addresses are `0x` prefixed, 20-byte hex strings. Token ids (`TokenId`) can be a decimal string (`'6522'`), a `0x`
+prefixed hex string (`'0x197a'`), a safe integer or a `bigint`. Amounts are returned as exact decimal strings.
 
-- `getBalance(accountAddress)`: Fetches the balance of the main token for an account.
-- `getBalanceOf(accountAddress, contractAddress)`: Fetches the balance of a specified ERC20 token for an account.
-- `getName(contractAddress)`: Fetches the name of the ERC20 token.
-- `getSymbol(contractAddress)`: Fetches the symbol of the ERC20 token.
-- `getTotalSupply(contractAddress)`: Fetches the total supply of the ERC20 token.
+### `client.erc20`
 
-### Erc721 Methods
+- `getBalance(accountAddress)`: The native token balance of an account, in Ether.
+- `getBalanceOf(accountAddress, contractAddress)`: The token balance of an account, using the decimals of the token.
+- `getDecimals(contractAddress)`: The number of decimals of the token.
+- `getName(contractAddress)`: The name of the token.
+- `getSymbol(contractAddress)`: The symbol of the token.
+- `getTotalSupply(contractAddress)`: The total supply of the token, using the decimals of the token.
 
-- `getBalanceOf(accountAddress, contractAddress)`: Fetches the balance of specified ERC721 tokens for an account.
-- `getOwnerOf(contractAddress)`: Fetches the owner address of a specific ERC721 token.
-- `getTokenUri(contractAddress)`: Fetches the URI pointing to the metadata of the ERC721 token.
+### `client.erc721`
 
-### Erc1155 Methods
+- `getBalanceOf(accountAddress, contractAddress)`: The number of tokens an account owns.
+- `getOwnerOf(contractAddress, tokenId)`: The owner address of a token, lowercase.
+- `getTokenUri(contractAddress, tokenId)`: The metadata URI of a token, as the contract returns it.
 
-- `getBalanceOf(accountAddress, contractAddress, tokenId)`: Fetches the balance of a specific token ID for an ERC1155 token at a given account address.
-- `getBalanceOfBatch(accountAddresses, contractAddress, tokenIds)`: Fetches the balances for multiple token IDs at multiple account addresses for ERC1155 tokens.
+### `client.erc1155`
+
+- `getBalanceOf(accountAddress, contractAddress, tokenId)`: The balance of one token id for one account.
+- `getBalanceOfBatch(accountAddresses, contractAddress, tokenIds)`: The balance of each pair of account and token
+  id, in order.
+
+## Development
+
+```bash
+npm ci
+npm run check # format, lint, typecheck, tests and the package smoke test
+```
+
+| Script                 | What it does                                                    |
+| ---------------------- | --------------------------------------------------------------- |
+| `npm run build`        | Compiles `src/` to `dist/` with TypeScript 7, with declarations |
+| `npm test`             | Runs the Jest tests, offline                                    |
+| `npm run lint`         | Oxlint with type-aware rules (tsgolint)                         |
+| `npm run typecheck`    | TypeScript type check                                           |
+| `npm run format`       | Formats the repository with Prettier                            |
+| `npm run test:package` | Builds and imports the package by name, with ESM and CommonJS   |
 
 ## Contributing
 
-Contributions are welcome! If you'd like to contribute, please fork the repository and use a feature branch. Pull requests are warmly welcome.
+Contributions are welcome. Fork the repository, work on a feature branch and open a pull request. `npm run check`
+must pass.
 
-## Licensing
+## License
 
-The code in this project is licensed under MIT license.
-
-## Contact
-
-If you have any questions or comments about the library, please feel free to open an issue or a pull request on our GitHub repository.
+[MIT](LICENSE)

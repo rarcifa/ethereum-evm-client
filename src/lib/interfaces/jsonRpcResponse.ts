@@ -21,10 +21,10 @@ export interface JsonRpcResponse<T> {
  * @interface
  * @property {number} code - Numeric error code indicating the type of error that occurred.
  * @property {string} message - Human-readable string describing the error.
- * @property {any} data - Optional. Additional data related to the error. This can be any type and contains context-specific error information.
+ * @property {unknown} data - Optional. Additional data related to the error. This can be any type and contains context-specific error information.
  */
 export interface JsonRpcError {
   code: number;
   message: string;
-  data?: any;
+  data?: unknown;
 }

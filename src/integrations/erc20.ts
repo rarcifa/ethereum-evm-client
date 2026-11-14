@@ -1,64 +1,79 @@
-import { AxiosInstance, AxiosResponse } from 'axios';
+import type { AxiosInstance } from 'axios';
 
 import { Erc20, EthMethod } from '../lib/interfaces/ethMethods.js';
-import { JsonRpcRequestPayload } from '../lib/interfaces/jsonRpcRequest.js';
-import { JsonRpcResponse } from '../lib/interfaces/jsonRpcResponse.js';
+import type { JsonRpcRequestPayload } from '../lib/interfaces/jsonRpcRequest.js';
 
-import { constructEthMethodPayload } from '../utils/ethCall.js';
+import { constructEthMethodPayload, sendEthRequest } from '../utils/ethCall.js';
 import { format } from '../utils/formatting.js';
 
 /**
  * erc20 integration for managing Ethereum RPC requests.
  *
- * @fileoverview This file provides helper functions for Ethereum JSON-RPC interactions.
+ * @fileoverview This file provides helper functions for Ethereum JSON-RPC interactions for erc20 tokens.
  * @namespace erc20
  */
 export const erc20 = {
   /**
-   * Fetches the balance of an account.
+   * Fetches the native token balance of an account.
    *
-   * @param {JsonRpcRequestPayload} accountAddress - The account address to fetch the balance from.
+   * @param {string} accountAddress - The account address to fetch the balance from.
    * @param {AxiosInstance} ethereumInstance - The ethereum client to initialize the erc20 instance
-   * @returns {Promise<string>} The main token balance of the account.
+   * @returns {Promise<string>} The native token balance of the account, in Ether.
    *
    * @example
-   * const data = erc20.getBalance('0xACCOUNT_ADDRESS');
+   * const data = erc20.getBalance('0xACCOUNT_ADDRESS', ethereumInstance);
    */
   getBalance: async (
     accountAddress: string,
     ethereumInstance: AxiosInstance
   ): Promise<string> => {
     const data: JsonRpcRequestPayload = constructEthMethodPayload(
-      accountAddress,
+      format.checkAddress(accountAddress),
       EthMethod.GetBalance
     );
 
-    try {
-      const response: AxiosResponse<JsonRpcResponse<string>> =
-        await ethereumInstance.post<JsonRpcResponse<string>>('', data);
+    const result = await sendEthRequest(
+      ethereumInstance,
+      data,
+      'erc20/getBalance'
+    );
 
-      if (response.data.error) {
-        console.log('[erc20/getBalance] error:', response.data.error.message);
-        throw new Error(
-          `[erc20/getBalance] error: ${response.data.error.message}`
-        );
-      }
-
-      if (!response.data.result) {
-        console.error('[erc20/getBalance] error: No result returned');
-        throw new Error('[erc20/getBalance] error: No result returned');
-      }
-
-      const result: string = format.weiToEther(response.data.result);
-      return result;
-    } catch (e) {
-      console.error('[erc20/getBalance] error:', e);
-      throw e;
-    }
+    return format.weiToEther(result);
   },
 
   /**
-   * Fetches the token balance of an account of the erc20 token.
+   * Fetches the number of decimals of the erc20 token.
+   *
+   * @param {string} contractAddress - The contract address of the erc20 instance.
+   * @param {AxiosInstance} ethereumInstance - The ethereum client to initialize the erc20 instance
+   * @returns {Promise<number>} The number of decimals the token uses.
+   *
+   * @example
+   * const data = erc20.getDecimals('0xCONTRACT_ADDRESS', ethereumInstance);
+   */
+  getDecimals: async (
+    contractAddress: string,
+    ethereumInstance: AxiosInstance
+  ): Promise<number> => {
+    const data: JsonRpcRequestPayload = constructEthMethodPayload(
+      {
+        to: format.checkAddress(contractAddress),
+        data: Erc20.Decimals,
+      },
+      EthMethod.Call
+    );
+
+    const result = await sendEthRequest(
+      ethereumInstance,
+      data,
+      'erc20/getDecimals'
+    );
+
+    return Number(format.formatTokenAmount(result, 0));
+  },
+
+  /**
+   * Fetches the token balance of an account of the erc20 token, using the decimals of the token.
    *
    * @param {string} accountAddress - The account address to fetch the balance from.
    * @param {string} contractAddress - The contract address of the erc20 instance.
@@ -66,48 +81,27 @@ export const erc20 = {
    * @returns {Promise<string>} The erc20 token balance of the account.
    *
    * @example
-   * const data = erc20.getBalanceOf('0xACCOUNT_ADDRESS', '0xCONTRACT_ADDRESS');
+   * const data = erc20.getBalanceOf('0xACCOUNT_ADDRESS', '0xCONTRACT_ADDRESS', ethereumInstance);
    */
   getBalanceOf: async (
     accountAddress: string,
     contractAddress: string,
     ethereumInstance: AxiosInstance
   ): Promise<string> => {
-    const paddedAddress = accountAddress.substring(2).padStart(64, '0');
-    const param = `${Erc20.BalanceOf}${paddedAddress}`;
     const data: JsonRpcRequestPayload = constructEthMethodPayload(
       {
-        to: contractAddress,
-        data: param,
+        to: format.checkAddress(contractAddress),
+        data: `${Erc20.BalanceOf}${format.encodeAddress(accountAddress)}`,
       },
       EthMethod.Call
     );
 
-    try {
-      const response: AxiosResponse<JsonRpcResponse<string>> =
-        await ethereumInstance.post<JsonRpcResponse<string>>('', data);
+    const [result, decimals] = await Promise.all([
+      sendEthRequest(ethereumInstance, data, 'erc20/getBalanceOf'),
+      erc20.getDecimals(contractAddress, ethereumInstance),
+    ]);
 
-      if (response.data.error) {
-        console.error(
-          '[erc20/getBalanceOf] error:',
-          response.data.error.message
-        );
-        throw new Error(
-          `[erc20/getBalanceOf] error: ${response.data.error.message}`
-        );
-      }
-
-      if (!response.data.result) {
-        console.error('[erc20/getBalanceOf] error: No result returned');
-        throw new Error('[erc20/getBalanceOf] error: No result returned');
-      }
-
-      const result: string = format.weiToEther(response.data.result);
-      return result;
-    } catch (e) {
-      console.error('[erc20/getBalanceOf] error:', e);
-      throw e;
-    }
+    return format.formatTokenAmount(result, decimals);
   },
 
   /**
@@ -118,7 +112,7 @@ export const erc20 = {
    * @returns {Promise<string>} The name of the token.
    *
    * @example
-   * const data = erc20.getName('0xCONTRACT_ADDRESS');
+   * const data = erc20.getName('0xCONTRACT_ADDRESS', ethereumInstance);
    */
   getName: async (
     contractAddress: string,
@@ -126,34 +120,19 @@ export const erc20 = {
   ): Promise<string> => {
     const data: JsonRpcRequestPayload = constructEthMethodPayload(
       {
-        to: contractAddress,
+        to: format.checkAddress(contractAddress),
         data: Erc20.Name,
       },
       EthMethod.Call
     );
 
-    try {
-      const response: AxiosResponse<JsonRpcResponse<string>> =
-        await ethereumInstance.post<JsonRpcResponse<string>>('', data);
+    const result = await sendEthRequest(
+      ethereumInstance,
+      data,
+      'erc20/getName'
+    );
 
-      if (response.data.error) {
-        console.error('[erc20/getName] error:', response.data.error.message);
-        throw new Error(
-          `[erc20/getName] error: ${response.data.error.message}`
-        );
-      }
-
-      if (!response.data.result) {
-        console.error('[erc20/getName] error: No result returned');
-        throw new Error('[erc20/getName] error: No result returned');
-      }
-
-      const result: string = format.decodeHexString(response.data.result);
-      return result;
-    } catch (e) {
-      console.error('[erc20/getName] error:', e);
-      throw e;
-    }
+    return format.decodeHexString(result);
   },
 
   /**
@@ -164,7 +143,7 @@ export const erc20 = {
    * @returns {Promise<string>} The symbol of the token.
    *
    * @example
-   * const data = erc20.getSymbol('0xCONTRACT_ADDRESS');
+   * const data = erc20.getSymbol('0xCONTRACT_ADDRESS', ethereumInstance);
    */
   getSymbol: async (
     contractAddress: string,
@@ -172,45 +151,30 @@ export const erc20 = {
   ): Promise<string> => {
     const data: JsonRpcRequestPayload = constructEthMethodPayload(
       {
-        to: contractAddress,
+        to: format.checkAddress(contractAddress),
         data: Erc20.Symbol,
       },
       EthMethod.Call
     );
 
-    try {
-      const response: AxiosResponse<JsonRpcResponse<string>> =
-        await ethereumInstance.post<JsonRpcResponse<string>>('', data);
+    const result = await sendEthRequest(
+      ethereumInstance,
+      data,
+      'erc20/getSymbol'
+    );
 
-      if (response.data.error) {
-        console.error('[erc20/getSymbol] error:', response.data.error.message);
-        throw new Error(
-          `[erc20/getSymbol] error: ${response.data.error.message}`
-        );
-      }
-
-      if (!response.data.result) {
-        console.error('[erc20/getSymbol] error: No result returned');
-        throw new Error('[erc20/getSymbol] error: No result returned');
-      }
-
-      const result: string = format.decodeHexString(response.data.result);
-      return result;
-    } catch (e) {
-      console.error('[erc20/getSymbol] error:', e);
-      throw e;
-    }
+    return format.decodeHexString(result);
   },
 
   /**
-   * Fetches the total supply of the erc20 token.
+   * Fetches the total supply of the erc20 token, using the decimals of the token.
    *
    * @param {string} contractAddress - The contract address of the erc20 instance.
    * @param {AxiosInstance} ethereumInstance - The ethereum client to initialize the erc20 instance
    * @returns {Promise<string>} The total supply of the token.
    *
    * @example
-   * const data = erc20.getTotalSupply('0xCONTRACT_ADDRESS');
+   * const data = erc20.getTotalSupply('0xCONTRACT_ADDRESS', ethereumInstance);
    */
   getTotalSupply: async (
     contractAddress: string,
@@ -218,36 +182,17 @@ export const erc20 = {
   ): Promise<string> => {
     const data: JsonRpcRequestPayload = constructEthMethodPayload(
       {
-        to: contractAddress,
+        to: format.checkAddress(contractAddress),
         data: Erc20.TotalSupply,
       },
       EthMethod.Call
     );
 
-    try {
-      const response: AxiosResponse<JsonRpcResponse<string>> =
-        await ethereumInstance.post<JsonRpcResponse<string>>('', data);
+    const [result, decimals] = await Promise.all([
+      sendEthRequest(ethereumInstance, data, 'erc20/getTotalSupply'),
+      erc20.getDecimals(contractAddress, ethereumInstance),
+    ]);
 
-      if (response.data.error) {
-        console.error(
-          '[erc20/getTotalSupply] error:',
-          response.data.error.message
-        );
-        throw new Error(
-          `[erc20/getTotalSupply] error: ${response.data.error.message}`
-        );
-      }
-
-      if (!response.data.result) {
-        console.error('[erc20/getTotalSupply] error: No result returned');
-        throw new Error('[erc20/getTotalSupply] error: No result returned');
-      }
-
-      const result: string = format.formatTokenAmount(response.data.result, 18);
-      return result;
-    } catch (e) {
-      console.error('[erc20/getTotalSupply] error:', e);
-      throw e;
-    }
+    return format.formatTokenAmount(result, decimals);
   },
 };
