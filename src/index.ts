@@ -1,3 +1,9 @@
+/**
+ * Client for reading ERC20, ERC721 and ERC1155 token data from Ethereum and other EVM compatible chains over
+ * JSON-RPC.
+ *
+ * @packageDocumentation
+ */
 export { EthereumClient, createClient } from './lib/client/ethereumClient.js';
 export type { ClientConfig } from './lib/client/jsonRpcClient.js';
 export type { Erc20Client } from './integrations/erc20.js';

@@ -5,25 +5,22 @@ import type { TokenId } from '../lib/interfaces/tokenId.js';
 import { format } from '../utils/formatting.js';
 
 /**
- * Reads erc721 token data over JSON-RPC.
- *
- * @fileoverview This file provides the client for Ethereum JSON-RPC interactions for erc721 tokens.
- * @class
+ * Client for erc721 token data, read over JSON-RPC.
  *
  * @example
+ * ```ts
  * const client = createClient({ endpoint: 'RPC_ENDPOINT' });
  * const owner = await client.erc721.getOwnerOf('0xCONTRACT_ADDRESS', 'TOKEN_ID');
+ * ```
  */
 export class Erc721Client {
-  /**
-   * The JSON-RPC client that sends every request.
-   */
+  /** The JSON-RPC client that sends every request. */
   readonly #rpc: JsonRpcClient;
 
   /**
    * Creates an erc721 client.
    *
-   * @param {JsonRpcClient} rpc - The JSON-RPC client that sends every request.
+   * @param rpc - The JSON-RPC client that sends every request.
    */
   constructor(rpc: JsonRpcClient) {
     this.#rpc = rpc;
@@ -32,14 +29,16 @@ export class Erc721Client {
   /**
    * Fetches the number of erc721 tokens an account owns.
    *
-   * @param {string} accountAddress - The account address to fetch the balance from.
-   * @param {string} contractAddress - The contract address of the erc721 token.
-   * @returns {Promise<string>} The number of tokens the account owns.
-   * @throws {RpcError} When the node answers with a JSON-RPC error.
-   * @throws {Error} When an address is invalid, the request fails or the contract returns no data.
+   * @param accountAddress - The account address to fetch the balance from.
+   * @param contractAddress - The contract address of the erc721 token.
+   * @returns The number of tokens the account owns.
+   * @throws {@link RpcError} When the node answers with a JSON-RPC error.
+   * @throws {@link Error} When an address is invalid, the request fails or the contract returns no data.
    *
    * @example
+   * ```ts
    * const balance = await client.erc721.getBalanceOf('0xACCOUNT_ADDRESS', '0xCONTRACT_ADDRESS');
+   * ```
    */
   async getBalanceOf(
     accountAddress: string,
@@ -57,14 +56,16 @@ export class Erc721Client {
   /**
    * Fetches the owner address of the erc721 token.
    *
-   * @param {string} contractAddress - The contract address of the erc721 token.
-   * @param {TokenId} tokenId - The token id.
-   * @returns {Promise<string>} The owner address of the token, lowercase.
-   * @throws {RpcError} When the node answers with a JSON-RPC error, such as a revert for a token that does not exist.
-   * @throws {Error} When the address or token id is invalid, the request fails or the contract returns no data.
+   * @param contractAddress - The contract address of the erc721 token.
+   * @param tokenId - The token id.
+   * @returns The owner address of the token, lowercase.
+   * @throws {@link RpcError} When the node answers with a JSON-RPC error, such as a revert for a token that does not exist.
+   * @throws {@link Error} When the address or token id is invalid, the request fails or the contract returns no data.
    *
    * @example
+   * ```ts
    * const owner = await client.erc721.getOwnerOf('0xCONTRACT_ADDRESS', 'TOKEN_ID');
+   * ```
    */
   async getOwnerOf(contractAddress: string, tokenId: TokenId): Promise<string> {
     const result = await this.#rpc.call(
@@ -79,14 +80,16 @@ export class Erc721Client {
   /**
    * Fetches the metadata uri of the erc721 token.
    *
-   * @param {string} contractAddress - The contract address of the erc721 token.
-   * @param {TokenId} tokenId - The token id.
-   * @returns {Promise<string>} The uri of the token metadata, as the contract returns it.
-   * @throws {RpcError} When the node answers with a JSON-RPC error, such as a revert for a token that does not exist.
-   * @throws {Error} When the address or token id is invalid, the request fails or the contract returns no data.
+   * @param contractAddress - The contract address of the erc721 token.
+   * @param tokenId - The token id.
+   * @returns The uri of the token metadata, as the contract returns it.
+   * @throws {@link RpcError} When the node answers with a JSON-RPC error, such as a revert for a token that does not exist.
+   * @throws {@link Error} When the address or token id is invalid, the request fails or the contract returns no data.
    *
    * @example
+   * ```ts
    * const uri = await client.erc721.getTokenUri('0xCONTRACT_ADDRESS', 'TOKEN_ID');
+   * ```
    */
   async getTokenUri(
     contractAddress: string,

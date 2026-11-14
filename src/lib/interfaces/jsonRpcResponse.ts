@@ -1,30 +1,32 @@
 /**
- * Interface representing the structure of a JSON-RPC response.
+ * The response to a JSON-RPC request.
  *
- * @interface
- * @template T The type of the result contained in the response.
- * @property {string} jsonrpc - The version of the JSON-RPC protocol used (e.g., "2.0").
- * @property {number} id - A unique identifier matching the original request ID.
- * @property {T} result - Optional. The result of the RPC call if successful. The type of the result is generic and depends on the specific RPC method called.
- * @property {JsonRpcError} error - Optional. An error object containing details about the error if the RPC call failed.
+ * @typeParam T - The type of the result, which depends on the method called.
  */
 export interface JsonRpcResponse<T> {
+  /** Version of the JSON-RPC protocol, `2.0`. */
   jsonrpc: string;
+
+  /** Identifier of the request this response answers. */
   id: number;
+
+  /** The result of the request, when it succeeded. */
   result?: T;
+
+  /** The error of the request, when it failed. */
   error?: JsonRpcError;
 }
 
 /**
- * Interface defining the structure of an error in a JSON-RPC response.
- *
- * @interface
- * @property {number} code - Numeric error code indicating the type of error that occurred.
- * @property {string} message - Human-readable string describing the error.
- * @property {unknown} data - Optional. Additional data related to the error. This can be any type and contains context-specific error information.
+ * The error member of a failed JSON-RPC response.
  */
 export interface JsonRpcError {
+  /** Numeric code of the error, such as `-32000`. */
   code: number;
+
+  /** Readable description of the error. */
   message: string;
+
+  /** Additional data about the error, such as revert data. */
   data?: unknown;
 }

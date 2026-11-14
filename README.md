@@ -142,8 +142,8 @@ npm run check # format, lint, typecheck, tests and the package smoke test
 
 ## Contributing
 
-Contributions are welcome. Fork the repository, work on a feature branch and open a pull request. `npm run check`
-must pass.
+Contributions are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) for the workflow and the documentation comment
+convention.
 
 ## License
 

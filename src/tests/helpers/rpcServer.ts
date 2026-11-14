@@ -5,15 +5,18 @@ import type { AddressInfo } from 'node:net';
 import type { JsonRpcRequestPayload } from '../../lib/interfaces/jsonRpcRequest.js';
 
 /**
- * One request received by the test server.
+ * A request received by the test server.
  */
 export interface ReceivedRequest {
+  /** The JSON-RPC payload of the request. */
   body: JsonRpcRequestPayload;
+
+  /** The HTTP headers of the request. */
   headers: IncomingHttpHeaders;
 }
 
 /**
- * Answers one JSON-RPC request with the `result` or `error` member of the response.
+ * Function that builds the `result` or `error` member of the response to one JSON-RPC request.
  */
 export type RpcHandler = (
   body: JsonRpcRequestPayload
@@ -23,16 +26,22 @@ export type RpcHandler = (
  * A JSON-RPC server on the loopback interface, for tests that need no network.
  */
 export interface RpcServer {
+  /** The URL of the server, such as `http://127.0.0.1:50123`. */
   url: string;
+
+  /** The requests the server received, in order. */
   requests: ReceivedRequest[];
+
+  /** Stops the server. */
   close: () => Promise<void>;
 }
 
 /**
  * Starts a JSON-RPC server on 127.0.0.1 that answers every request with the handler.
  *
- * @param {RpcHandler} handler - Builds the answer of each request.
- * @returns {Promise<RpcServer>} The server, its url and the requests it received.
+ * @param handler - Builds the answer of each request.
+ * @returns The server, its url and the requests it received.
+ * @throws {@link Error} When the server does not listen on a TCP address.
  */
 export const startRpcServer = async (
   handler: RpcHandler
@@ -76,8 +85,8 @@ export const startRpcServer = async (
 /**
  * Encodes a number as one ABI word.
  *
- * @param {bigint} value - The number.
- * @returns {string} The `0x` prefixed word.
+ * @param value - The number.
+ * @returns The `0x` prefixed word.
  */
 export const word = (value: bigint): string =>
   `0x${value.toString(16).padStart(64, '0')}`;
@@ -85,8 +94,8 @@ export const word = (value: bigint): string =>
 /**
  * Encodes a string as the ABI result of a call that returns `string`.
  *
- * @param {string} value - The string.
- * @returns {string} The `0x` prefixed ABI data.
+ * @param value - The string.
+ * @returns The `0x` prefixed ABI data.
  */
 export const abiString = (value: string): string => {
   const hex = Buffer.from(value, 'utf8').toString('hex');
@@ -97,8 +106,8 @@ export const abiString = (value: string): string => {
 /**
  * Returns the call data of a request sent with `eth_call`.
  *
- * @param {ReceivedRequest} request - The request.
- * @returns {string} The call data.
+ * @param request - The request.
+ * @returns The call data.
  */
 export const callData = (request: ReceivedRequest): string => {
   const [params] = request.body.params;
@@ -108,8 +117,8 @@ export const callData = (request: ReceivedRequest): string => {
 /**
  * Returns the contract address of a request sent with `eth_call`.
  *
- * @param {ReceivedRequest} request - The request.
- * @returns {string} The contract address.
+ * @param request - The request.
+ * @returns The contract address.
  */
 export const callTarget = (request: ReceivedRequest): string => {
   const [params] = request.body.params;

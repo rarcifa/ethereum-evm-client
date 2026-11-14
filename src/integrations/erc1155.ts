@@ -5,25 +5,22 @@ import type { TokenId } from '../lib/interfaces/tokenId.js';
 import { format } from '../utils/formatting.js';
 
 /**
- * Reads erc1155 token data over JSON-RPC.
- *
- * @fileoverview This file provides the client for Ethereum JSON-RPC interactions for erc1155 tokens.
- * @class
+ * Client for erc1155 token data, read over JSON-RPC.
  *
  * @example
+ * ```ts
  * const client = createClient({ endpoint: 'RPC_ENDPOINT' });
  * const balance = await client.erc1155.getBalanceOf('0xACCOUNT_ADDRESS', '0xCONTRACT_ADDRESS', 'TOKEN_ID');
+ * ```
  */
 export class Erc1155Client {
-  /**
-   * The JSON-RPC client that sends every request.
-   */
+  /** The JSON-RPC client that sends every request. */
   readonly #rpc: JsonRpcClient;
 
   /**
    * Creates an erc1155 client.
    *
-   * @param {JsonRpcClient} rpc - The JSON-RPC client that sends every request.
+   * @param rpc - The JSON-RPC client that sends every request.
    */
   constructor(rpc: JsonRpcClient) {
     this.#rpc = rpc;
@@ -32,15 +29,17 @@ export class Erc1155Client {
   /**
    * Fetches the balance of one token id at one account address.
    *
-   * @param {string} accountAddress - The account address to fetch the token balance from.
-   * @param {string} contractAddress - The contract address of the erc1155 token.
-   * @param {TokenId} tokenId - The token id.
-   * @returns {Promise<string>} The balance of the token id at the account address.
-   * @throws {RpcError} When the node answers with a JSON-RPC error.
-   * @throws {Error} When an address or the token id is invalid, the request fails or the contract returns no data.
+   * @param accountAddress - The account address to fetch the token balance from.
+   * @param contractAddress - The contract address of the erc1155 token.
+   * @param tokenId - The token id.
+   * @returns The balance of the token id at the account address.
+   * @throws {@link RpcError} When the node answers with a JSON-RPC error.
+   * @throws {@link Error} When an address or the token id is invalid, the request fails or the contract returns no data.
    *
    * @example
+   * ```ts
    * const balance = await client.erc1155.getBalanceOf('0xACCOUNT_ADDRESS', '0xCONTRACT_ADDRESS', 'TOKEN_ID');
+   * ```
    */
   async getBalanceOf(
     accountAddress: string,
@@ -59,15 +58,17 @@ export class Erc1155Client {
   /**
    * Fetches the balances of pairs of account address and token id.
    *
-   * @param {string[]} accountAddresses - The account addresses to fetch the token balances from.
-   * @param {string} contractAddress - The contract address of the erc1155 token.
-   * @param {TokenId[]} tokenIds - The token ids, one per account address.
-   * @returns {Promise<string[]>} The balance of each pair, in the order of the arguments.
-   * @throws {RpcError} When the node answers with a JSON-RPC error.
-   * @throws {Error} When the arrays differ in length, an address or token id is invalid, the request fails or the contract returns no data.
+   * @param accountAddresses - The account addresses to fetch the token balances from.
+   * @param contractAddress - The contract address of the erc1155 token.
+   * @param tokenIds - The token ids, one per account address.
+   * @returns The balance of each pair, in the order of the arguments.
+   * @throws {@link RpcError} When the node answers with a JSON-RPC error.
+   * @throws {@link Error} When the arrays differ in length, an address or token id is invalid, the request fails or the contract returns no data.
    *
    * @example
+   * ```ts
    * const balances = await client.erc1155.getBalanceOfBatch(['0xACCOUNT_ADDRESS_1', '0xACCOUNT_ADDRESS_2'], '0xCONTRACT_ADDRESS', ['TOKEN_ID_1', 'TOKEN_ID_2']);
+   * ```
    */
   async getBalanceOfBatch(
     accountAddresses: string[],

@@ -10,19 +10,27 @@ import {
 } from '../helpers/rpcServer.js';
 import type { RpcHandler, RpcServer } from '../helpers/rpcServer.js';
 
+/** An account address with mixed letter case. */
 const ACCOUNT = '0x18cF36D6925026f00A57754757Ecd480B92cBefC';
+
+/** An account address with leading zeros. */
 const OTHER_ACCOUNT = '0x0000000000000000000000000000000000c0ffee';
+
+/** A token contract address. */
 const TOKEN = '0xdAC17F958D2ee523a2206206994597C13D831ec7';
+
+/** The call data of `decimals()`. */
 const DECIMALS = '0x313ce567';
 
+/** The server of the running test, closed after each test. */
 let activeServer: RpcServer | undefined;
 
 /**
  * Starts a JSON-RPC server with the handler and returns a client for it.
  *
- * @param {RpcHandler} handler - Builds the answer of each request.
- * @param {string} [apiKey] - Optional. The api key of the client.
- * @returns {Promise<object>} The client and the server.
+ * @param handler - Builds the answer of each request.
+ * @param apiKey - Optional. The api key of the client.
+ * @returns The client and the server.
  */
 const setup = async (handler: RpcHandler, apiKey?: string) => {
   activeServer = await startRpcServer(handler);
@@ -35,9 +43,9 @@ const setup = async (handler: RpcHandler, apiKey?: string) => {
 /**
  * Answers `decimals()` with the given decimals and every other call with the result.
  *
- * @param {number} decimals - The decimals of the token.
- * @param {string} result - The result of every other call.
- * @returns {RpcHandler} The handler.
+ * @param decimals - The decimals of the token.
+ * @param result - The result of every other call.
+ * @returns The handler.
  */
 const tokenHandler =
   (decimals: number, result: string): RpcHandler =>

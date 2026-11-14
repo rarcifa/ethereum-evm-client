@@ -8,47 +8,51 @@ import type { JsonRpcResponse } from '../interfaces/jsonRpcResponse.js';
 import { constructEthMethodPayload } from '../../utils/ethCall.js';
 import { format } from '../../utils/formatting.js';
 
-/**
- * Default time limit of one JSON-RPC request, in milliseconds.
- */
+/** Default time limit of one JSON-RPC request, in milliseconds. */
 const DEFAULT_TIMEOUT = 30_000;
 
 /**
- * Configuration parameters for creating a blockchain client instance.
- *
- * @interface
- * @property {string} endpoint - The base URL for the RPC server.
- * @property {string} [apiKey] - Optional. API key for accessing the RPC server, sent as a bearer token.
- * @property {Record<string, string>} [additionalHeaders] - Optional. Additional headers sent with every request.
- * @property {number} [timeout] - Optional. Time limit of one request in milliseconds. Defaults to 30000.
+ * Configuration of a client: the endpoint and how to reach it.
  */
 export interface ClientConfig {
+  /** The base URL of the JSON-RPC endpoint. */
   endpoint: string;
+
+  /** API key of the endpoint, sent as a bearer token. */
   apiKey?: string;
+
+  /**
+   * Additional headers sent with every request.
+   *
+   * @defaultValue `{}`
+   */
   additionalHeaders?: Record<string, string>;
+
+  /**
+   * Time limit of one request, in milliseconds.
+   *
+   * @defaultValue `30000`
+   */
   timeout?: number;
 }
 
 /**
- * Sends JSON-RPC requests to one endpoint. The token clients use it for every request.
- *
- * @fileoverview This file provides the JSON-RPC transport shared by the token clients.
- * @class
+ * Client that sends JSON-RPC requests to one endpoint. The token clients use it for every request.
  *
  * @example
+ * ```ts
  * const rpc = new JsonRpcClient({ endpoint: 'RPC_ENDPOINT' });
  * const result = await rpc.call('0xCONTRACT_ADDRESS', Erc20.Name, 'erc20/getName');
+ * ```
  */
 export class JsonRpcClient {
-  /**
-   * The HTTP client bound to the endpoint, with the headers and timeout of the configuration.
-   */
+  /** The HTTP client bound to the endpoint, with the headers and timeout of the configuration. */
   readonly #http: AxiosInstance;
 
   /**
    * Creates a JSON-RPC client for one endpoint.
    *
-   * @param {ClientConfig} config - The endpoint, api key, headers and timeout.
+   * @param config - The endpoint, api key, headers and timeout.
    */
   constructor({
     endpoint,
@@ -70,15 +74,18 @@ export class JsonRpcClient {
   /**
    * Sends one JSON-RPC request and returns its result.
    *
-   * @param {string} method - The JSON-RPC method, such as `eth_getBalance`.
-   * @param {RpcParams} params - The call object or account address.
-   * @param {string} context - The method sending the request, such as `erc20/getBalance`. Every error message starts with it.
-   * @returns {Promise<string>} The result of the request.
-   * @throws {RpcError} When the node answers with a JSON-RPC error.
-   * @throws {Error} When the request fails, or the node returns no result (`0x` for a call to an address without code).
+   * @param method - The JSON-RPC method, such as `eth_getBalance`.
+   * @param params - The call object or account address.
+   * @param context - The method sending the request, such as `erc20/getBalance`. Every error message starts with it.
+   * @returns The result of the request.
+   * @throws {@link RpcError} When the node answers with a JSON-RPC error.
+   * @throws {@link Error} When the request fails, or the node returns no result (`0x` for a call to an address
+   * without code).
    *
    * @example
+   * ```ts
    * const result = await rpc.request(EthMethod.GetBalance, '0xACCOUNT_ADDRESS', 'erc20/getBalance');
+   * ```
    */
   async request(
     method: string,
@@ -120,15 +127,17 @@ export class JsonRpcClient {
   /**
    * Calls a contract with `eth_call` at the latest block and returns the ABI encoded result.
    *
-   * @param {string} contractAddress - The contract address.
-   * @param {string} data - The call data: the function selector followed by the ABI encoded arguments.
-   * @param {string} context - The method sending the request, such as `erc20/getName`. Every error message starts with it.
-   * @returns {Promise<string>} The ABI encoded result of the call.
-   * @throws {RpcError} When the node answers with a JSON-RPC error, such as a revert.
-   * @throws {Error} When the contract address is invalid, the request fails, or the call returns no data.
+   * @param contractAddress - The contract address.
+   * @param data - The call data: the function selector followed by the ABI encoded arguments.
+   * @param context - The method sending the request, such as `erc20/getName`. Every error message starts with it.
+   * @returns The ABI encoded result of the call.
+   * @throws {@link RpcError} When the node answers with a JSON-RPC error, such as a revert.
+   * @throws {@link Error} When the contract address is invalid, the request fails, or the call returns no data.
    *
    * @example
+   * ```ts
    * const result = await rpc.call('0xCONTRACT_ADDRESS', Erc20.Name, 'erc20/getName');
+   * ```
    */
   call(
     contractAddress: string,

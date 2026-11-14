@@ -4,22 +4,25 @@ import type {
 } from '../lib/interfaces/jsonRpcRequest.js';
 
 /**
- * This function creates the payload necessary for making JSON-RPC calls such as `eth_call`.
+ * Creates the payload of a JSON-RPC request, such as `eth_call`.
  *
- * @param {RpcParams} params - An object containing the 'to' and 'data' properties for the RPC call, or an account address.
- * @param {string} method - The JSON-RPC method to be invoked (e.g., 'eth_call', 'eth_getBalance').
- * @param {string} [tag='latest'] - The block number tag specifying the state to query. Common values are 'latest', 'earliest', or 'pending'.
- * @param {number} [id=1] - A unique identifier for the JSON-RPC request, used to match responses with requests.
- * @returns {JsonRpcRequestPayload} The JSON-RPC payload formatted as an object.
+ * @param params - The call object, with the `to` and `data` properties, or an account address.
+ * @param method - The JSON-RPC method to invoke, such as `eth_call` or `eth_getBalance`.
+ * @param tag - Optional. The block tag of the state to query, such as `latest`, `earliest` or `pending`. Defaults to
+ * `latest`.
+ * @param id - Optional. The identifier that matches the response to the request. Defaults to `1`.
+ * @returns The JSON-RPC payload.
  *
  * @example
+ * ```ts
  * const data = constructEthMethodPayload(
- *  {
- *   to: '0xCONTRACT_ADDRESS',
- *   data: '0x6352211e',
- *  },
- *  'eth_call'
+ *   {
+ *     to: '0xCONTRACT_ADDRESS',
+ *     data: '0x6352211e',
+ *   },
+ *   'eth_call'
  * );
+ * ```
  */
 export const constructEthMethodPayload = (
   params: RpcParams,

@@ -1,142 +1,88 @@
 /**
- * Enumeration for common Ethereum JSON-RPC method names.
- *
- * @enum {string}
+ * Common Ethereum JSON-RPC method names.
  */
 export enum EthMethod {
-  /**
-   * Method for making a call or a transaction to read data.
-   */
+  /** Method for making a call to read contract data. */
   Call = 'eth_call',
 
-  /**
-   * Method for getting the balance of an account.
-   */
+  /** Method for getting the native token balance of an account. */
   GetBalance = 'eth_getBalance',
 }
 
 /**
- * Enumeration for common ERC20 token function selectors.
- *
- * @enum {string}
+ * Common ERC20 token function selectors.
  */
 export enum Erc20 {
-  /**
-   * Selector for `balanceOf` function to get the token balance of an account.
-   */
+  /** Selector for `balanceOf`, which returns the token balance of an account. */
   BalanceOf = '0x70a08231',
 
-  /**
-   * Selector for `totalSupply` function to get the total token supply.
-   */
+  /** Selector for `totalSupply`, which returns the total token supply. */
   TotalSupply = '0x18160ddd',
 
-  /**
-   * Selector for `decimals` function to get the number of decimals the token uses.
-   */
+  /** Selector for `decimals`, which returns the number of decimals the token uses. */
   Decimals = '0x313ce567',
 
-  /**
-   * Selector for `name` function to get the name of the token.
-   */
+  /** Selector for `name`, which returns the name of the token. */
   Name = '0x06fdde03',
 
-  /**
-   * Selector for `symbol` function to get the symbol of the token.
-   */
+  /** Selector for `symbol`, which returns the symbol of the token. */
   Symbol = '0x95d89b41',
 
-  /**
-   * Selector for `transfer` function to transfer tokens to a specified account.
-   */
+  /** Selector for `transfer`, which transfers tokens to an account. */
   Transfer = '0xa9059cbb',
 
-  /**
-   * Selector for `approve` function to allow a spender to withdraw up to the specified amount of tokens.
-   */
+  /** Selector for `approve`, which allows a spender to withdraw up to an amount of tokens. */
   Approve = '0x095ea7b3',
 
-  /**
-   * Selector for `allowance` function to check the amount of tokens that an owner allowed to a spender.
-   */
+  /** Selector for `allowance`, which returns the amount of tokens an owner allowed a spender. */
   Allowance = '0xdd62ed3e',
 }
 
 /**
- * Enumeration for common ERC721 token function selectors.
- *
- * @enum {string}
+ * Common ERC721 token function selectors.
  */
 export enum Erc721 {
-  /**
-   * Selector for `balanceOf` function to get the token balance of an account.
-   */
+  /** Selector for `balanceOf`, which returns the number of tokens an account owns. */
   BalanceOf = '0x70a08231',
 
-  /**
-   * Selector for `ownerOf` function to find the owner of a specific token.
-   */
+  /** Selector for `ownerOf`, which returns the owner of a token. */
   OwnerOf = '0x6352211e',
 
-  /**
-   * Selector for `transferFrom` function to transfer ownership of a token.
-   */
+  /** Selector for `transferFrom`, which transfers the ownership of a token. */
   TransferFrom = '0x23b872dd',
 
-  /**
-   * Selector for `tokenURI` function to get the URI for a token's metadata.
-   */
+  /** Selector for `tokenURI`, which returns the uri of the metadata of a token. */
   TokenURI = '0xc87b56dd',
 
-  /**
-   * Selector for `approve` function to approve another address to transfer the ownership of a specific NFT.
-   */
+  /** Selector for `approve`, which allows another address to transfer a token. */
   Approve = '0x095ea7b3',
 
-  /**
-   * Selector for `getApproved` function to get the approved address for a token ID.
-   */
+  /** Selector for `getApproved`, which returns the approved address of a token. */
   GetApproved = '0x081812fc',
 
-  /**
-   * Selector for `setApprovalForAll` function to enable or disable approval for a third party to manage all assets.
-   */
+  /** Selector for `setApprovalForAll`, which allows or forbids an operator to manage every token of the caller. */
   SetApprovalForAll = '0xa22cb465',
 }
 
 /**
- * Enumeration for common ERC1155 token function selectors.
- *
- * @enum {string}
+ * Common ERC1155 token function selectors.
  */
 export enum Erc1155 {
-  /**
-   * Selector for `balanceOf` function to get the balance of account's tokens.
-   */
+  /** Selector for `balanceOf`, which returns the balance of one token id at one account. */
   BalanceOf = '0x00fdd58e',
 
-  /**
-   * Selector for `balanceOfBatch` function to get the balance of multiple accounts' tokens.
-   */
+  /** Selector for `balanceOfBatch`, which returns the balances of pairs of account and token id. */
   BalanceOfBatch = '0x4e1273f4',
 
-  /**
-   * Selector for `safeTransferFrom` function to safely transfer tokens from one account to another.
-   */
+  /** Selector for `safeTransferFrom`, which transfers tokens of one id from one account to another. */
   SafeTransferFrom = '0xf242432a',
 
-  /**
-   * Selector for `safeBatchTransferFrom` function to safely transfer multiple types of tokens from one account to another.
-   */
+  /** Selector for `safeBatchTransferFrom`, which transfers tokens of several ids from one account to another. */
   SafeBatchTransferFrom = '0x2eb2c2d6',
 
-  /**
-   * Selector for `setApprovalForAll` function to enable or disable approval for a third party to manage all of the caller's tokens.
-   */
+  /** Selector for `setApprovalForAll`, which allows or forbids an operator to manage every token of the caller. */
   SetApprovalForAll = '0xa22cb465',
 
-  /**
-   * Selector for `isApprovedForAll` function to check if an address is an authorized operator for another address.
-   */
+  /** Selector for `isApprovedForAll`, which returns whether an address is an operator for another address. */
   IsApprovedForAll = '0xe985e9c5',
 }
