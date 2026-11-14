@@ -41,6 +41,11 @@ const client = createClient({
 });
 ```
 
+`createClient(config)` is the same as `new EthereumClient(config)`. The client has one property per token standard:
+`client.erc20`, `client.erc721` and `client.erc1155`. Their methods are class methods, so call them on the client
+(`client.erc20.getName(address)`); to pass one as a callback, bind it first
+(`client.erc20.getName.bind(client.erc20)`).
+
 ### ERC20
 
 ```ts
@@ -74,23 +79,46 @@ console.log('Balances:', balances); // e.g. ['7', '9']
 
 ### Errors
 
+Every error the client throws is an `EvmClientError`, with the method that detected the problem in `context` and a
+message of the form `[context] error: description`. Branch on the class, never on the message:
+
+| Class                  | When                                                                                        |
+| ---------------------- | ------------------------------------------------------------------------------------------- |
+| `InvalidArgumentError` | An address or token id is invalid. Nothing is sent.                                         |
+| `RequestError`         | The node cannot be reached, the request times out, or it answers with an HTTP error status. |
+| `RpcError`             | The node answers with a JSON-RPC error, such as a revert. Has `code` and `data`.            |
+| `InvalidResponseError` | The answer is not JSON-RPC, has no result (`0x`), or does not decode to the expected value. |
+
 ```ts
-import { RpcError } from '@rarcifa/ethereum-evm-client';
+import {
+  InvalidResponseError,
+  RequestError,
+  RpcError,
+} from '@rarcifa/ethereum-evm-client';
 
 try {
   await client.erc20.getName('0xCONTRACT_ADDRESS');
-} catch (e) {
-  if (e instanceof RpcError) {
-    console.error('Node error', e.code, e.message); // '[erc20/getName] error: ...'
+} catch (error) {
+  if (error instanceof RequestError) {
+    // the node could not be reached: retry later
+  } else if (error instanceof RpcError) {
+    console.error('Node error', error.code, error.message);
+  } else if (error instanceof InvalidResponseError) {
+    // the address is not a contract of this standard
   } else {
-    console.error(e); // invalid input, network failure or empty result
+    throw error;
   }
 }
 ```
 
-The client never logs: every failure is thrown to the caller.
+Wrapped errors keep the original error as `cause`. The client never logs: every failure is thrown to the caller,
+which owns logging, retries and alerting.
 
 ## API
+
+Exported: `createClient`, `EthereumClient`, the errors `EvmClientError`, `InvalidArgumentError`, `RequestError`,
+`RpcError` and `InvalidResponseError`, and the types `ClientConfig`, `Erc20Client`, `Erc721Client`,
+`Erc1155Client` and `TokenId`.
 
 Addresses are `0x` prefixed, 20-byte hex strings. Token ids (`TokenId`) can be a decimal string (`'6522'`), a `0x`
 prefixed hex string (`'0x197a'`), a safe integer or a `bigint`. Amounts are returned as exact decimal strings.
@@ -134,8 +162,8 @@ npm run check # format, lint, typecheck, tests and the package smoke test
 
 ## Contributing
 
-Contributions are welcome. Fork the repository, work on a feature branch and open a pull request. `npm run check`
-must pass.
+Contributions are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) for the workflow and the documentation comment
+convention.
 
 ## License
 

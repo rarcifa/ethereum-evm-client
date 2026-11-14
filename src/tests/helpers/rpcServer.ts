@@ -5,34 +5,62 @@ import type { AddressInfo } from 'node:net';
 import type { JsonRpcRequestPayload } from '../../lib/interfaces/jsonRpcRequest.js';
 
 /**
- * One request received by the test server.
+ * A request received by the test server.
  */
 export interface ReceivedRequest {
+  /** The JSON-RPC payload of the request. */
   body: JsonRpcRequestPayload;
+
+  /** The HTTP headers of the request. */
   headers: IncomingHttpHeaders;
 }
 
 /**
- * Answers one JSON-RPC request with the `result` or `error` member of the response.
+ * An HTTP answer sent as it is, to test answers that are not a JSON-RPC response.
+ */
+export interface RawAnswer {
+  /** The HTTP status code. */
+  status: number;
+
+  /** The `Content-Type` header. */
+  contentType: string;
+
+  /** The body, sent unchanged. */
+  body: string;
+}
+
+/**
+ * Function that builds the answer to one JSON-RPC request: the `result` or `error` member of a JSON-RPC response, a
+ * raw HTTP answer, or no answer at all.
  */
 export type RpcHandler = (
   body: JsonRpcRequestPayload
-) => { result: unknown } | { error: { code: number; message: string } };
+) =>
+  | { result: unknown }
+  | { error: { code: number; message: string } }
+  | { raw: RawAnswer }
+  | { hang: true };
 
 /**
  * A JSON-RPC server on the loopback interface, for tests that need no network.
  */
 export interface RpcServer {
+  /** The URL of the server, such as `http://127.0.0.1:50123`. */
   url: string;
+
+  /** The requests the server received, in order. */
   requests: ReceivedRequest[];
+
+  /** Stops the server. */
   close: () => Promise<void>;
 }
 
 /**
  * Starts a JSON-RPC server on 127.0.0.1 that answers every request with the handler.
  *
- * @param {RpcHandler} handler - Builds the answer of each request.
- * @returns {Promise<RpcServer>} The server, its url and the requests it received.
+ * @param handler - Builds the answer of each request.
+ * @returns The server, its url and the requests it received.
+ * @throws {@link Error} When the server does not listen on a TCP address.
  */
 export const startRpcServer = async (
   handler: RpcHandler
@@ -47,10 +75,21 @@ export const startRpcServer = async (
     req.on('end', () => {
       const body: JsonRpcRequestPayload = JSON.parse(raw);
       requests.push({ body, headers: req.headers });
+      const answer = handler(body);
+
+      if ('hang' in answer) {
+        return;
+      }
+
+      if ('raw' in answer) {
+        res.statusCode = answer.raw.status;
+        res.setHeader('Content-Type', answer.raw.contentType);
+        res.end(answer.raw.body);
+        return;
+      }
+
       res.setHeader('Content-Type', 'application/json');
-      res.end(
-        JSON.stringify({ jsonrpc: '2.0', id: body.id, ...handler(body) })
-      );
+      res.end(JSON.stringify({ jsonrpc: '2.0', id: body.id, ...answer }));
     });
   });
 
@@ -68,7 +107,8 @@ export const startRpcServer = async (
     requests,
     close: () =>
       new Promise<void>((resolve, reject) => {
-        server.close((e) => (e ? reject(e) : resolve()));
+        server.closeAllConnections();
+        server.close((error) => (error ? reject(error) : resolve()));
       }),
   };
 };
@@ -76,8 +116,8 @@ export const startRpcServer = async (
 /**
  * Encodes a number as one ABI word.
  *
- * @param {bigint} value - The number.
- * @returns {string} The `0x` prefixed word.
+ * @param value - The number.
+ * @returns The `0x` prefixed word.
  */
 export const word = (value: bigint): string =>
   `0x${value.toString(16).padStart(64, '0')}`;
@@ -85,8 +125,8 @@ export const word = (value: bigint): string =>
 /**
  * Encodes a string as the ABI result of a call that returns `string`.
  *
- * @param {string} value - The string.
- * @returns {string} The `0x` prefixed ABI data.
+ * @param value - The string.
+ * @returns The `0x` prefixed ABI data.
  */
 export const abiString = (value: string): string => {
   const hex = Buffer.from(value, 'utf8').toString('hex');
@@ -97,8 +137,8 @@ export const abiString = (value: string): string => {
 /**
  * Returns the call data of a request sent with `eth_call`.
  *
- * @param {ReceivedRequest} request - The request.
- * @returns {string} The call data.
+ * @param request - The request.
+ * @returns The call data.
  */
 export const callData = (request: ReceivedRequest): string => {
   const [params] = request.body.params;
@@ -108,8 +148,8 @@ export const callData = (request: ReceivedRequest): string => {
 /**
  * Returns the contract address of a request sent with `eth_call`.
  *
- * @param {ReceivedRequest} request - The request.
- * @returns {string} The contract address.
+ * @param request - The request.
+ * @returns The contract address.
  */
 export const callTarget = (request: ReceivedRequest): string => {
   const [params] = request.body.params;

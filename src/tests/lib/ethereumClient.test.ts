@@ -1,6 +1,14 @@
 import { afterEach, describe, expect, it } from '@jest/globals';
 
-import { RpcError, createClient } from '../../index.js';
+import {
+  EthereumClient,
+  EvmClientError,
+  InvalidArgumentError,
+  InvalidResponseError,
+  RequestError,
+  RpcError,
+  createClient,
+} from '../../index.js';
 import {
   abiString,
   callData,
@@ -10,19 +18,27 @@ import {
 } from '../helpers/rpcServer.js';
 import type { RpcHandler, RpcServer } from '../helpers/rpcServer.js';
 
+/** An account address with mixed letter case. */
 const ACCOUNT = '0x18cF36D6925026f00A57754757Ecd480B92cBefC';
+
+/** An account address with leading zeros. */
 const OTHER_ACCOUNT = '0x0000000000000000000000000000000000c0ffee';
+
+/** A token contract address. */
 const TOKEN = '0xdAC17F958D2ee523a2206206994597C13D831ec7';
+
+/** The call data of `decimals()`. */
 const DECIMALS = '0x313ce567';
 
+/** The server of the running test, closed after each test. */
 let activeServer: RpcServer | undefined;
 
 /**
  * Starts a JSON-RPC server with the handler and returns a client for it.
  *
- * @param {RpcHandler} handler - Builds the answer of each request.
- * @param {string} [apiKey] - Optional. The api key of the client.
- * @returns {Promise<object>} The client and the server.
+ * @param handler - Builds the answer of each request.
+ * @param apiKey - Optional. The api key of the client.
+ * @returns The client and the server.
  */
 const setup = async (handler: RpcHandler, apiKey?: string) => {
   activeServer = await startRpcServer(handler);
@@ -35,9 +51,9 @@ const setup = async (handler: RpcHandler, apiKey?: string) => {
 /**
  * Answers `decimals()` with the given decimals and every other call with the result.
  *
- * @param {number} decimals - The decimals of the token.
- * @param {string} result - The result of every other call.
- * @returns {RpcHandler} The handler.
+ * @param decimals - The decimals of the token.
+ * @param result - The result of every other call.
+ * @returns The handler.
  */
 const tokenHandler =
   (decimals: number, result: string): RpcHandler =>
@@ -46,6 +62,21 @@ const tokenHandler =
     const data = typeof params === 'string' ? '' : params.data;
     return { result: data === DECIMALS ? word(BigInt(decimals)) : result };
   };
+
+/**
+ * Returns the error a promise rejects with.
+ *
+ * @param promise - The promise.
+ * @returns The rejection reason, or `undefined` when the promise resolves.
+ */
+const rejection = async (promise: Promise<unknown>): Promise<unknown> => {
+  try {
+    await promise;
+    return undefined;
+  } catch (error) {
+    return error;
+  }
+};
 
 afterEach(async () => {
   await activeServer?.close();
@@ -225,6 +256,16 @@ describe('erc1155', () => {
 });
 
 describe('client', () => {
+  it('creates the same client with createClient and new EthereumClient', async () => {
+    const { server } = await setup(() => ({ result: abiString('USDT') }));
+    const client = new EthereumClient({ endpoint: server.url });
+
+    expect(createClient({ endpoint: server.url })).toBeInstanceOf(
+      EthereumClient
+    );
+    await expect(client.erc20.getSymbol(TOKEN)).resolves.toBe('USDT');
+  });
+
   it('sends the api key as a bearer token', async () => {
     const { client, server } = await setup(() => ({ result: '0x0' }), 'k3y');
 
@@ -232,46 +273,166 @@ describe('client', () => {
 
     expect(server.requests[0].headers.authorization).toBe('Bearer k3y');
   });
+});
 
-  it('throws an RpcError with the code of a JSON-RPC error', async () => {
+describe('errors', () => {
+  it('throws an RpcError with the code and data of a JSON-RPC error', async () => {
     const { client } = await setup(() => ({
       error: { code: -32000, message: 'execution reverted' },
     }));
 
-    const error = await client.erc20.getName(TOKEN).catch((e: unknown) => e);
+    const error = await rejection(client.erc20.getName(TOKEN));
 
     expect(error).toBeInstanceOf(RpcError);
+    expect(error).toBeInstanceOf(EvmClientError);
     expect(error).toMatchObject({
+      name: 'RpcError',
       code: -32000,
+      context: 'erc20/getName',
       message: '[erc20/getName] error: execution reverted',
     });
   });
 
-  it('throws when a call returns no data', async () => {
-    const { client } = await setup(() => ({ result: '0x' }));
+  it('reads a JSON-RPC error sent with an HTTP error status', async () => {
+    const { client } = await setup(() => ({
+      raw: {
+        status: 500,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          jsonrpc: '2.0',
+          id: 1,
+          error: { code: -32603, message: 'internal error' },
+        }),
+      },
+    }));
 
-    await expect(client.erc20.getName(TOKEN)).rejects.toThrow(
-      '[erc20/getName] error: No result returned'
-    );
+    const error = await rejection(client.erc20.getName(TOKEN));
+
+    expect(error).toBeInstanceOf(RpcError);
+    expect(error).toMatchObject({ code: -32603 });
   });
 
-  it('rejects an invalid address before sending', async () => {
-    const { client, server } = await setup(() => ({ result: word(0n) }));
+  it('throws a RequestError for an HTTP error status without a JSON-RPC error', async () => {
+    const { client } = await setup(() => ({
+      raw: {
+        status: 429,
+        contentType: 'text/plain',
+        body: 'Too Many Requests',
+      },
+    }));
 
-    await expect(client.erc721.getBalanceOf('0x123', TOKEN)).rejects.toThrow(
-      '[format/encodeAddress] error: Invalid address: 0x123'
-    );
-    await expect(client.erc20.getName('not-an-address')).rejects.toThrow(
-      '[format/checkAddress] error: Invalid address: not-an-address'
-    );
-    expect(server.requests).toHaveLength(0);
+    const error = await rejection(client.erc20.getName(TOKEN));
+
+    expect(error).toBeInstanceOf(RequestError);
+    expect(error).toMatchObject({
+      message: '[erc20/getName] error: Request failed with HTTP status 429',
+    });
   });
 
-  it('reports a failed request with the method that sent it', async () => {
+  it('throws a RequestError with the cause when the node cannot be reached', async () => {
     const client = createClient({ endpoint: 'http://127.0.0.1:1' });
 
-    await expect(client.erc20.getBalance(ACCOUNT)).rejects.toThrow(
-      /^\[erc20\/getBalance\] error: /
+    const error = await rejection(client.erc20.getBalance(ACCOUNT));
+
+    expect(error).toBeInstanceOf(RequestError);
+    expect(error).toMatchObject({ context: 'erc20/getBalance' });
+    expect(error).toMatchObject({ cause: expect.any(Error) });
+  });
+
+  it('throws a RequestError when the request times out', async () => {
+    const { server } = await setup(() => ({ hang: true }));
+    const client = createClient({ endpoint: server.url, timeout: 100 });
+
+    const error = await rejection(client.erc20.getName(TOKEN));
+
+    expect(error).toBeInstanceOf(RequestError);
+    expect(error).toMatchObject({ message: expect.stringMatching(/timeout/) });
+  });
+
+  it.each([
+    [
+      'an HTML page',
+      { raw: { status: 200, contentType: 'text/html', body: '<html></html>' } },
+      'The answer is not a JSON-RPC response',
+    ],
+    ['an empty result', { result: '0x' }, 'No result returned'],
+    [
+      'an object result',
+      { result: { value: 1 } },
+      'The result is not a hex string',
+    ],
+    ['a text result', { result: 'hello' }, 'The result is not a hex string'],
+  ] as const)(
+    'throws an InvalidResponseError for %s',
+    async (_, answer, description) => {
+      const { client } = await setup(() => answer);
+
+      const error = await rejection(client.erc20.getName(TOKEN));
+
+      expect(error).toBeInstanceOf(InvalidResponseError);
+      expect(error).toMatchObject({
+        message: `[erc20/getName] error: ${description}`,
+      });
+    }
+  );
+
+  it('rejects ABI data that claims more elements than it holds', async () => {
+    const { client } = await setup(() => ({
+      result: `${word(32n)}${word(2n ** 200n).slice(2)}`,
+    }));
+
+    const error = await rejection(
+      client.erc1155.getBalanceOfBatch([ACCOUNT], TOKEN, ['1'])
     );
+
+    expect(error).toBeInstanceOf(InvalidResponseError);
+    expect(error).toMatchObject({ context: 'format/decodeUint256Array' });
+  });
+
+  it('rejects a word wider than an address', async () => {
+    const { client } = await setup(() => ({ result: `0x${'f'.repeat(64)}` }));
+
+    const error = await rejection(client.erc721.getOwnerOf(TOKEN, '1'));
+
+    expect(error).toBeInstanceOf(InvalidResponseError);
+    expect(error).toMatchObject({ context: 'format/decodeAddress' });
+  });
+
+  it('rejects more than 255 decimals', async () => {
+    const { client } = await setup(() => ({ result: word(2n ** 100n) }));
+
+    const error = await rejection(client.erc20.getDecimals(TOKEN));
+
+    expect(error).toBeInstanceOf(InvalidResponseError);
+    expect(error).toMatchObject({
+      message: `[erc20/getDecimals] error: Invalid decimals: ${2n ** 100n}`,
+    });
+  });
+
+  it('rejects invalid arguments before sending, as a rejected promise', async () => {
+    const { client, server } = await setup(() => ({ result: word(0n) }));
+
+    const calls = [
+      client.erc721.getBalanceOf('0x123', TOKEN),
+      client.erc20.getName('not-an-address'),
+      client.erc721.getOwnerOf(TOKEN, '-1'),
+      client.erc1155.getBalanceOfBatch([ACCOUNT], TOKEN, ['1', '2']),
+    ];
+    const errors = await Promise.all(calls.map(rejection));
+
+    expect(
+      errors.map((error) => error instanceof InvalidArgumentError)
+    ).toEqual([true, true, true, true]);
+    expect(
+      errors.map((error) =>
+        error instanceof EvmClientError ? error.context : undefined
+      )
+    ).toEqual([
+      'format/encodeAddress',
+      'format/checkAddress',
+      'format/encodeUint256',
+      'format/encodeBalanceOfBatchArgs',
+    ]);
+    expect(server.requests).toHaveLength(0);
   });
 });

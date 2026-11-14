@@ -1,198 +1,201 @@
-import type { AxiosInstance } from 'axios';
-
+import type { JsonRpcClient } from '../lib/client/jsonRpcClient.js';
+import { InvalidResponseError } from '../lib/errors.js';
 import { Erc20, EthMethod } from '../lib/interfaces/ethMethods.js';
-import type { JsonRpcRequestPayload } from '../lib/interfaces/jsonRpcRequest.js';
 
-import { constructEthMethodPayload, sendEthRequest } from '../utils/ethCall.js';
 import { format } from '../utils/formatting.js';
 
+/** Largest number of decimals a token can use: `decimals()` returns a `uint8`. */
+const MAX_DECIMALS = 255n;
+
 /**
- * erc20 integration for managing Ethereum RPC requests.
+ * Client for erc20 token data, and native token balances, read over JSON-RPC.
  *
- * @fileoverview This file provides helper functions for Ethereum JSON-RPC interactions for erc20 tokens.
- * @namespace erc20
+ * @example
+ * ```ts
+ * const client = createClient({ endpoint: 'RPC_ENDPOINT' });
+ * const symbol = await client.erc20.getSymbol('0xCONTRACT_ADDRESS');
+ * ```
  */
-export const erc20 = {
+export class Erc20Client {
+  /** The JSON-RPC client that sends every request. */
+  readonly #rpc: JsonRpcClient;
+
+  /**
+   * Creates an erc20 client.
+   *
+   * @param rpc - The JSON-RPC client that sends every request.
+   */
+  constructor(rpc: JsonRpcClient) {
+    this.#rpc = rpc;
+  }
+
   /**
    * Fetches the native token balance of an account.
    *
-   * @param {string} accountAddress - The account address to fetch the balance from.
-   * @param {AxiosInstance} ethereumInstance - The ethereum client to initialize the erc20 instance
-   * @returns {Promise<string>} The native token balance of the account, in Ether.
+   * @param accountAddress - The account address to fetch the balance from.
+   * @returns The native token balance of the account, in Ether.
+   * @throws {@link InvalidArgumentError} When the address is invalid.
+   * @throws {@link RpcError} When the node answers with a JSON-RPC error.
+   * @throws {@link RequestError} When the request fails or times out.
+   * @throws {@link InvalidResponseError} When the node returns no result or an invalid answer.
    *
    * @example
-   * const data = erc20.getBalance('0xACCOUNT_ADDRESS', ethereumInstance);
+   * ```ts
+   * const balance = await client.erc20.getBalance('0xACCOUNT_ADDRESS');
+   * ```
    */
-  getBalance: async (
-    accountAddress: string,
-    ethereumInstance: AxiosInstance
-  ): Promise<string> => {
-    const data: JsonRpcRequestPayload = constructEthMethodPayload(
+  async getBalance(accountAddress: string): Promise<string> {
+    const result = await this.#rpc.request(
+      EthMethod.GetBalance,
       format.checkAddress(accountAddress),
-      EthMethod.GetBalance
-    );
-
-    const result = await sendEthRequest(
-      ethereumInstance,
-      data,
       'erc20/getBalance'
     );
 
     return format.weiToEther(result);
-  },
+  }
 
   /**
    * Fetches the number of decimals of the erc20 token.
    *
-   * @param {string} contractAddress - The contract address of the erc20 instance.
-   * @param {AxiosInstance} ethereumInstance - The ethereum client to initialize the erc20 instance
-   * @returns {Promise<number>} The number of decimals the token uses.
+   * @param contractAddress - The contract address of the erc20 token.
+   * @returns The number of decimals the token uses.
+   * @throws {@link InvalidArgumentError} When the address is invalid.
+   * @throws {@link RpcError} When the node answers with a JSON-RPC error.
+   * @throws {@link RequestError} When the request fails or times out.
+   * @throws {@link InvalidResponseError} When the contract returns no data, an invalid answer, or more than 255
+   * decimals.
    *
    * @example
-   * const data = erc20.getDecimals('0xCONTRACT_ADDRESS', ethereumInstance);
+   * ```ts
+   * const decimals = await client.erc20.getDecimals('0xCONTRACT_ADDRESS');
+   * ```
    */
-  getDecimals: async (
-    contractAddress: string,
-    ethereumInstance: AxiosInstance
-  ): Promise<number> => {
-    const data: JsonRpcRequestPayload = constructEthMethodPayload(
-      {
-        to: format.checkAddress(contractAddress),
-        data: Erc20.Decimals,
-      },
-      EthMethod.Call
-    );
-
-    const result = await sendEthRequest(
-      ethereumInstance,
-      data,
+  async getDecimals(contractAddress: string): Promise<number> {
+    const result = await this.#rpc.call(
+      contractAddress,
+      Erc20.Decimals,
       'erc20/getDecimals'
     );
 
-    return Number(format.formatTokenAmount(result, 0));
-  },
+    const decimals = BigInt(result);
+
+    if (decimals > MAX_DECIMALS) {
+      throw new InvalidResponseError(
+        'erc20/getDecimals',
+        `Invalid decimals: ${decimals}`
+      );
+    }
+
+    return Number(decimals);
+  }
 
   /**
-   * Fetches the token balance of an account of the erc20 token, using the decimals of the token.
+   * Fetches the token balance of an account, using the decimals of the token.
    *
-   * @param {string} accountAddress - The account address to fetch the balance from.
-   * @param {string} contractAddress - The contract address of the erc20 instance.
-   * @param {AxiosInstance} ethereumInstance - The ethereum client to initialize the erc20 instance
-   * @returns {Promise<string>} The erc20 token balance of the account.
+   * @param accountAddress - The account address to fetch the balance from.
+   * @param contractAddress - The contract address of the erc20 token.
+   * @returns The erc20 token balance of the account.
+   * @throws {@link InvalidArgumentError} When an address is invalid.
+   * @throws {@link RpcError} When the node answers with a JSON-RPC error.
+   * @throws {@link RequestError} When the request fails or times out.
+   * @throws {@link InvalidResponseError} When the contract returns no data or an invalid answer.
    *
    * @example
-   * const data = erc20.getBalanceOf('0xACCOUNT_ADDRESS', '0xCONTRACT_ADDRESS', ethereumInstance);
+   * ```ts
+   * const balance = await client.erc20.getBalanceOf('0xACCOUNT_ADDRESS', '0xCONTRACT_ADDRESS');
+   * ```
    */
-  getBalanceOf: async (
+  async getBalanceOf(
     accountAddress: string,
-    contractAddress: string,
-    ethereumInstance: AxiosInstance
-  ): Promise<string> => {
-    const data: JsonRpcRequestPayload = constructEthMethodPayload(
-      {
-        to: format.checkAddress(contractAddress),
-        data: `${Erc20.BalanceOf}${format.encodeAddress(accountAddress)}`,
-      },
-      EthMethod.Call
-    );
-
+    contractAddress: string
+  ): Promise<string> {
     const [result, decimals] = await Promise.all([
-      sendEthRequest(ethereumInstance, data, 'erc20/getBalanceOf'),
-      erc20.getDecimals(contractAddress, ethereumInstance),
+      this.#rpc.call(
+        contractAddress,
+        `${Erc20.BalanceOf}${format.encodeAddress(accountAddress)}`,
+        'erc20/getBalanceOf'
+      ),
+      this.getDecimals(contractAddress),
     ]);
 
     return format.formatTokenAmount(result, decimals);
-  },
+  }
 
   /**
    * Fetches the name of the erc20 token.
    *
-   * @param {string} contractAddress - The contract address of the erc20 instance.
-   * @param {AxiosInstance} ethereumInstance - The ethereum client to initialize the erc20 instance
-   * @returns {Promise<string>} The name of the token.
+   * @param contractAddress - The contract address of the erc20 token.
+   * @returns The name of the token.
+   * @throws {@link InvalidArgumentError} When the address is invalid.
+   * @throws {@link RpcError} When the node answers with a JSON-RPC error.
+   * @throws {@link RequestError} When the request fails or times out.
+   * @throws {@link InvalidResponseError} When the contract returns no data or an invalid answer.
    *
    * @example
-   * const data = erc20.getName('0xCONTRACT_ADDRESS', ethereumInstance);
+   * ```ts
+   * const name = await client.erc20.getName('0xCONTRACT_ADDRESS');
+   * ```
    */
-  getName: async (
-    contractAddress: string,
-    ethereumInstance: AxiosInstance
-  ): Promise<string> => {
-    const data: JsonRpcRequestPayload = constructEthMethodPayload(
-      {
-        to: format.checkAddress(contractAddress),
-        data: Erc20.Name,
-      },
-      EthMethod.Call
-    );
-
-    const result = await sendEthRequest(
-      ethereumInstance,
-      data,
+  async getName(contractAddress: string): Promise<string> {
+    const result = await this.#rpc.call(
+      contractAddress,
+      Erc20.Name,
       'erc20/getName'
     );
 
     return format.decodeHexString(result);
-  },
+  }
 
   /**
    * Fetches the symbol of the erc20 token.
    *
-   * @param {string} contractAddress - The contract address of the erc20 instance.
-   * @param {AxiosInstance} ethereumInstance - The ethereum client to initialize the erc20 instance
-   * @returns {Promise<string>} The symbol of the token.
+   * @param contractAddress - The contract address of the erc20 token.
+   * @returns The symbol of the token.
+   * @throws {@link InvalidArgumentError} When the address is invalid.
+   * @throws {@link RpcError} When the node answers with a JSON-RPC error.
+   * @throws {@link RequestError} When the request fails or times out.
+   * @throws {@link InvalidResponseError} When the contract returns no data or an invalid answer.
    *
    * @example
-   * const data = erc20.getSymbol('0xCONTRACT_ADDRESS', ethereumInstance);
+   * ```ts
+   * const symbol = await client.erc20.getSymbol('0xCONTRACT_ADDRESS');
+   * ```
    */
-  getSymbol: async (
-    contractAddress: string,
-    ethereumInstance: AxiosInstance
-  ): Promise<string> => {
-    const data: JsonRpcRequestPayload = constructEthMethodPayload(
-      {
-        to: format.checkAddress(contractAddress),
-        data: Erc20.Symbol,
-      },
-      EthMethod.Call
-    );
-
-    const result = await sendEthRequest(
-      ethereumInstance,
-      data,
+  async getSymbol(contractAddress: string): Promise<string> {
+    const result = await this.#rpc.call(
+      contractAddress,
+      Erc20.Symbol,
       'erc20/getSymbol'
     );
 
     return format.decodeHexString(result);
-  },
+  }
 
   /**
    * Fetches the total supply of the erc20 token, using the decimals of the token.
    *
-   * @param {string} contractAddress - The contract address of the erc20 instance.
-   * @param {AxiosInstance} ethereumInstance - The ethereum client to initialize the erc20 instance
-   * @returns {Promise<string>} The total supply of the token.
+   * @param contractAddress - The contract address of the erc20 token.
+   * @returns The total supply of the token.
+   * @throws {@link InvalidArgumentError} When the address is invalid.
+   * @throws {@link RpcError} When the node answers with a JSON-RPC error.
+   * @throws {@link RequestError} When the request fails or times out.
+   * @throws {@link InvalidResponseError} When the contract returns no data or an invalid answer.
    *
    * @example
-   * const data = erc20.getTotalSupply('0xCONTRACT_ADDRESS', ethereumInstance);
+   * ```ts
+   * const totalSupply = await client.erc20.getTotalSupply('0xCONTRACT_ADDRESS');
+   * ```
    */
-  getTotalSupply: async (
-    contractAddress: string,
-    ethereumInstance: AxiosInstance
-  ): Promise<string> => {
-    const data: JsonRpcRequestPayload = constructEthMethodPayload(
-      {
-        to: format.checkAddress(contractAddress),
-        data: Erc20.TotalSupply,
-      },
-      EthMethod.Call
-    );
-
+  async getTotalSupply(contractAddress: string): Promise<string> {
     const [result, decimals] = await Promise.all([
-      sendEthRequest(ethereumInstance, data, 'erc20/getTotalSupply'),
-      erc20.getDecimals(contractAddress, ethereumInstance),
+      this.#rpc.call(
+        contractAddress,
+        Erc20.TotalSupply,
+        'erc20/getTotalSupply'
+      ),
+      this.getDecimals(contractAddress),
     ]);
 
     return format.formatTokenAmount(result, decimals);
-  },
-};
+  }
+}

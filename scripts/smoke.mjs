@@ -12,11 +12,31 @@ for (const [kind, mod] of [
 ]) {
   assert.deepEqual(
     Object.keys(mod).toSorted(),
-    ['RpcError', 'createClient'],
+    [
+      'EthereumClient',
+      'EvmClientError',
+      'InvalidArgumentError',
+      'InvalidResponseError',
+      'RequestError',
+      'RpcError',
+      'createClient',
+    ],
     kind
   );
 
   const client = mod.createClient({ endpoint: 'http://127.0.0.1:1' });
+  assert.ok(client instanceof mod.EthereumClient, `${kind} createClient`);
+  for (const name of [
+    'InvalidArgumentError',
+    'InvalidResponseError',
+    'RequestError',
+    'RpcError',
+  ]) {
+    assert.ok(
+      mod[name].prototype instanceof mod.EvmClientError,
+      `${kind} ${name} extends EvmClientError`
+    );
+  }
   for (const [standard, methods] of Object.entries({
     erc20: [
       'getBalance',
@@ -30,7 +50,9 @@ for (const [kind, mod] of [
     erc1155: ['getBalanceOf', 'getBalanceOfBatch'],
   })) {
     assert.deepEqual(
-      Object.keys(client[standard]).toSorted(),
+      Object.getOwnPropertyNames(Object.getPrototypeOf(client[standard]))
+        .filter((name) => name !== 'constructor')
+        .toSorted(),
       methods,
       `${kind} ${standard}`
     );
