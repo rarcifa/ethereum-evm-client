@@ -162,8 +162,9 @@ npm run check # format, lint, typecheck, tests and the package smoke test
 
 ## Contributing
 
-Contributions are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) for the workflow and the documentation comment
-convention.
+Contributions are welcome. Fork the repository, work on a feature branch and open a pull request. `npm run check`
+must pass, and new code follows the patterns of the existing code: TSDoc comments, and the error classes of
+`src/lib/errors.ts`.
 
 ## License
 
