@@ -1,10 +1,9 @@
-import { AxiosInstance, AxiosResponse } from 'axios';
+import type { AxiosInstance } from 'axios';
 
 import { Erc1155, EthMethod } from '../lib/interfaces/ethMethods.js';
-import { JsonRpcRequestPayload } from '../lib/interfaces/jsonRpcRequest.js';
-import { JsonRpcResponse } from '../lib/interfaces/jsonRpcResponse.js';
+import type { JsonRpcRequestPayload } from '../lib/interfaces/jsonRpcRequest.js';
 
-import { constructEthMethodPayload } from '../utils/ethCall.js';
+import { constructEthMethodPayload, sendEthRequest } from '../utils/ethCall.js';
 import { format } from '../utils/formatting.js';
 
 /**
@@ -19,112 +18,70 @@ export const erc1155 = {
    *
    * @param {string} accountAddress - The account address to fetch the token balance from.
    * @param {string} contractAddress - The contract address of the erc1155 token.
-   * @param {string} tokenId - The specific token ID to check the balance of.
+   * @param {string | number | bigint} tokenId - The token id, as a decimal string, a `0x` prefixed hex string, a safe integer or a bigint.
    * @param {AxiosInstance} ethereumInstance - The ethereum client instance.
-   * @returns {Promise<string>} The balance of the erc1155 token for the specific token ID at the given account address.
+   * @returns {Promise<string>} The balance of the token id at the account address.
    *
    * @example
-   * const balance = erc1155.getBalanceOf('0xACCOUNT_ADDRESS', '0xCONTRACT_ADDRESS', 'TOKEN_ID', ethereumClient);
+   * const balance = erc1155.getBalanceOf('0xACCOUNT_ADDRESS', '0xCONTRACT_ADDRESS', 'TOKEN_ID', ethereumInstance);
    */
   getBalanceOf: async (
     accountAddress: string,
     contractAddress: string,
-    tokenId: string,
+    tokenId: string | number | bigint,
     ethereumInstance: AxiosInstance
   ): Promise<string> => {
-    const paddedTokenId = tokenId.substring(2).padStart(64, '0');
-    const paddedAddress = accountAddress.substring(2).padStart(64, '0');
-    const param = `${Erc1155.BalanceOf}${paddedAddress}${paddedTokenId}`;
     const data: JsonRpcRequestPayload = constructEthMethodPayload(
       {
-        to: contractAddress,
-        data: param,
+        to: format.checkAddress(contractAddress),
+        data: `${Erc1155.BalanceOf}${format.encodeAddress(accountAddress)}${format.encodeUint256(tokenId)}`,
       },
       EthMethod.Call
     );
 
-    try {
-      const response: AxiosResponse<JsonRpcResponse<string>> =
-        await ethereumInstance.post<JsonRpcResponse<string>>('', data);
+    const result = await sendEthRequest(
+      ethereumInstance,
+      data,
+      'erc1155/getBalanceOf'
+    );
 
-      if (response.data.error) {
-        console.error(
-          '[erc1155/getBalanceOf] Error:',
-          response.data.error.message
-        );
-        throw new Error(
-          `[erc1155/getBalanceOf] Error: ${response.data.error.message}`
-        );
-      }
-
-      if (!response.data.result) {
-        console.error('[erc1155/getBalanceOf] error: No result returned');
-        throw new Error('[erc1155/getBalanceOf] error: No result returned');
-      }
-
-      return format.formatTokenAmount(response.data.result, 0);
-    } catch (error) {
-      console.error('[erc1155/getBalanceOf] Exception:', error);
-      throw error;
-    }
+    return format.formatTokenAmount(result, 0);
   },
 
   /**
-   * Fetches the token balances for multiple token IDs at multiple account addresses.
+   * Fetches the token balances for pairs of account address and token ID.
    *
    * @param {string[]} accountAddresses - The account addresses to fetch the token balances from.
    * @param {string} contractAddress - The contract address of the erc1155 token.
-   * @param {string[]} tokenIds - The specific token IDs to check the balances of.
+   * @param {(string | number | bigint)[]} tokenIds - The token ids, one per account address.
    * @param {AxiosInstance} ethereumInstance - The ethereum client instance.
-   * @returns {Promise<string>} The balances of the erc1155 tokens for the specified token IDs at the given account addresses.
+   * @returns {Promise<string[]>} The balance of each pair, in the order of the arguments.
    *
    * @example
-   * const balances = erc1155.getBalanceOfBatch('0xACCOUNT_ADDRESS', '0xCONTRACT_ADDRESS', ['TOKEN_ID_1', 'TOKEN_ID_2'], ethereumClient);
+   * const balances = erc1155.getBalanceOfBatch(['0xACCOUNT_ADDRESS_1', '0xACCOUNT_ADDRESS_2'], '0xCONTRACT_ADDRESS', ['TOKEN_ID_1', 'TOKEN_ID_2'], ethereumInstance);
    */
   getBalanceOfBatch: async (
     accountAddresses: string[],
     contractAddress: string,
-    tokenIds: string[],
+    tokenIds: (string | number | bigint)[],
     ethereumInstance: AxiosInstance
-  ): Promise<string> => {
-    const { addresses, ids } = format.concatAddressesAndIds(
-      accountAddresses,
-      tokenIds
-    );
-    const param = `${Erc1155.BalanceOfBatch}${addresses}${ids}`;
+  ): Promise<string[]> => {
     const data: JsonRpcRequestPayload = constructEthMethodPayload(
       {
-        to: contractAddress,
-        data: param,
+        to: format.checkAddress(contractAddress),
+        data: `${Erc1155.BalanceOfBatch}${format.encodeBalanceOfBatchArgs(accountAddresses, tokenIds)}`,
       },
       EthMethod.Call
     );
 
-    try {
-      const response: AxiosResponse<JsonRpcResponse<string>> =
-        await ethereumInstance.post<JsonRpcResponse<string>>('', data);
+    const result = await sendEthRequest(
+      ethereumInstance,
+      data,
+      'erc1155/getBalanceOfBatch'
+    );
 
-      if (response.data.error) {
-        console.error(
-          '[erc1155/getBalanceOfBatch] Error:',
-          response.data.error.message
-        );
-        throw new Error(
-          `[erc1155/getBalanceOfBatch] Error: ${response.data.error.message}`
-        );
-      }
-
-      if (!response.data.result) {
-        console.error('[erc1155/getBalanceOfBatch] error: No result returned');
-        throw new Error(
-          '[erc1155/getBalanceOfBatch] error: No result returned'
-        );
-      }
-
-      return format.formatTokenAmount(response.data.result, 0);
-    } catch (error) {
-      console.error('[erc1155/getBalanceOfBatch] Exception:', error);
-      throw error;
-    }
+    return format
+      .decodeUint256Array(result)
+      .map((balance) => balance.toString());
   },
 };

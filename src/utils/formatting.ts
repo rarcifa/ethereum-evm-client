@@ -1,70 +1,61 @@
+const WORD_LENGTH = 64;
+const MAX_UINT256 = (1n << 256n) - 1n;
+const ADDRESS_PATTERN = /^0x[0-9a-fA-F]{40}$/;
+const HEX_PATTERN = /^0x[0-9a-fA-F]*$/;
+const DECIMAL_PATTERN = /^[0-9]+$/;
+
+/**
+ * Removes the `0x` prefix of a hex string.
+ *
+ * @param {string} hexString - The hex string.
+ * @returns {string} The hex digits without the prefix.
+ */
+const strip0x = (hexString: string): string =>
+  hexString.startsWith('0x') ? hexString.slice(2) : hexString;
+
+/**
+ * Decodes hex digits as UTF-8 text.
+ *
+ * @param {string} hexData - The hex digits, without the `0x` prefix.
+ * @returns {string} The decoded text.
+ */
+const hexToUtf8 = (hexData: string): string => {
+  const bytes = new Uint8Array(hexData.length / 2);
+  for (let i = 0; i < bytes.length; i++) {
+    bytes[i] = parseInt(hexData.slice(i * 2, i * 2 + 2), 16);
+  }
+  return new TextDecoder().decode(bytes);
+};
+
+/**
+ * Reads one 32-byte word of ABI encoded data as a number.
+ *
+ * @param {string} hexData - The ABI encoded data, without the `0x` prefix.
+ * @param {number} byteOffset - The byte offset of the word.
+ * @returns {bigint} The word as a number.
+ */
+const readWord = (hexData: string, byteOffset: number): bigint => {
+  const word = hexData.slice(byteOffset * 2, byteOffset * 2 + WORD_LENGTH);
+  if (word.length !== WORD_LENGTH) {
+    throw new Error('[format/readWord] error: ABI data is too short');
+  }
+  return BigInt(`0x${word}`);
+};
+
 /**
  * Provides utility functions for formatting and converting blockchain-related data types.
  *
- * @fileoverview This file includes functions for converting and decoding data types.
+ * @fileoverview This file includes functions for encoding call arguments and decoding call results.
  * @namespace format
  */
 export const format = {
   /**
-   * Converts a value from Wei to Ether. Handles various input formats and ensures accurate conversion using floating-point precision.
+   * Converts an integer amount in the smallest unit to a decimal string. The conversion is exact, and trailing zeros
+   * of the fraction are removed.
    *
-   * @param {string | number | bigint | boolean} weiValue - The value in Wei to be converted to Ether.
-   * @returns {string} The value in Ether, formatted as a string with up to 18 decimal places.
-   *
-   * @example
-   * const data = format.weiToEther('0xRETURNED_VALUE');
-   *
-   */
-  weiToEther: (weiValue: string | number | bigint | boolean): string => {
-    if (typeof weiValue === 'string' && !weiValue.startsWith('0x')) {
-      throw new Error(
-        '[format/weiToEther] error: Invalid input format for Wei value'
-      );
-    }
-
-    const value: bigint =
-      typeof weiValue === 'string'
-        ? BigInt(weiValue === '0x' ? '0x0' : weiValue)
-        : BigInt(weiValue);
-    const ether: number = Number(value) / 10 ** 18;
-
-    return ether === 0 ? '0' : ether.toFixed(18);
-  },
-
-  /**
-   * Decodes a hex string to a readable ASCII string. This function assumes the hex string is ABI-encoded.
-   *
-   * @param {string} hexString - The hex string to decode, typically ABI-encoded.
-   * @returns {string} The decoded ASCII string.
-   *
-   * @example
-   * const data = format.decodeHexString('0xRETURNED_VALUE');
-   */
-  decodeHexString: (hexString: string): string => {
-    if (hexString.startsWith('0x')) {
-      hexString = hexString.slice(2);
-    }
-
-    const startPosition = 128;
-
-    let asciiData = '';
-    for (let i = startPosition; i < hexString.length; i += 2) {
-      const part = hexString.slice(i, i + 2);
-      const charCode = parseInt(part, 16);
-      if (charCode !== 0) {
-        asciiData += String.fromCharCode(charCode);
-      }
-    }
-
-    return asciiData.trim();
-  },
-
-  /**
-   * Converts token amounts from the smallest unit based on specified decimals to a formatted string.
-   *
-   * @param {string | number | bigint} tokenAmount - The token amount in the smallest unit.
+   * @param {string | number | bigint} tokenAmount - The amount in the smallest unit, as a hex string, a decimal string, a safe integer or a bigint.
    * @param {number} decimals - The number of decimals the token uses.
-   * @returns {string} The formatted token amount.
+   * @returns {string} The formatted amount, such as `1234.5`.
    *
    * @example
    * const data = format.formatTokenAmount('0xRETURNED_VALUE', DECIMAL_VALUE);
@@ -73,87 +64,229 @@ export const format = {
     tokenAmount: string | number | bigint,
     decimals: number
   ): string => {
+    if (!Number.isInteger(decimals) || decimals < 0 || decimals > 255) {
+      throw new Error(
+        `[format/formatTokenAmount] error: Invalid decimals: ${decimals}`
+      );
+    }
+
+    if (typeof tokenAmount === 'number' && !Number.isSafeInteger(tokenAmount)) {
+      throw new Error(
+        `[format/formatTokenAmount] error: Invalid amount: ${tokenAmount}`
+      );
+    }
+
     if (tokenAmount === '0x') {
       return '0';
     }
 
-    const amount: bigint = BigInt(tokenAmount);
-
-    if (amount === BigInt(0)) {
-      return '0';
+    let amount: bigint;
+    try {
+      amount = BigInt(tokenAmount);
+    } catch {
+      throw new Error(
+        `[format/formatTokenAmount] error: Invalid amount: ${tokenAmount}`
+      );
     }
 
-    const divisor = BigInt(10 ** decimals);
-    const integerPart = amount / divisor;
-    const fractionalPart = amount % divisor;
-    const formattedInteger = new Intl.NumberFormat('en-US').format(
-      Number(integerPart)
-    );
+    if (amount < 0n) {
+      throw new Error(
+        `[format/formatTokenAmount] error: Invalid amount: ${tokenAmount}`
+      );
+    }
 
-    let formattedFractional: string = fractionalPart
+    const divisor = 10n ** BigInt(decimals);
+    const integerPart = amount / divisor;
+    const fractionalPart = (amount % divisor)
       .toString()
       .padStart(decimals, '0')
-      .substring(0, decimals);
-    formattedFractional = formattedFractional.replace(/0+$/, '');
+      .replace(/0+$/, '');
 
-    return formattedFractional.length > 0
-      ? `${formattedInteger}.${formattedFractional}`
-      : formattedInteger;
+    return fractionalPart.length > 0
+      ? `${integerPart}.${fractionalPart}`
+      : integerPart.toString();
   },
 
   /**
-   * Concatenates arrays of Ethereum account addresses and token IDs into single strings of concatenated, normalized values.
+   * Converts a value from Wei to Ether. The conversion is exact, and trailing zeros of the fraction are removed.
    *
-   * @param {string[]} accountAddresses - An array of Ethereum account addresses.
-   * @param {string[]} tokenIds - An array of token IDs associated with the addresses.
-   * @returns {object} An object containing concatenated and padded strings of addresses and token IDs.
+   * @param {string | number | bigint} weiValue - The value in Wei, as a hex string, a safe integer or a bigint.
+   * @returns {string} The value in Ether, such as `1.5`.
    *
    * @example
-   * const data = concatAddressesAndIds(['0xACCOUNT_ADDRESS_1', '0xACCOUNT_ADDRESS_2'], ['TOKEN_ID_1', 'TOKEN_ID_2']);
+   * const data = format.weiToEther('0xRETURNED_VALUE');
    */
-  concatAddressesAndIds: (
+  weiToEther: (weiValue: string | number | bigint): string => {
+    if (typeof weiValue === 'string' && !HEX_PATTERN.test(weiValue)) {
+      throw new Error(
+        '[format/weiToEther] error: Invalid input format for Wei value'
+      );
+    }
+
+    return format.formatTokenAmount(weiValue, 18);
+  },
+
+  /**
+   * Decodes the result of a call that returns a `string`. Also accepts a `bytes32` result, which some older tokens
+   * return for `name` and `symbol`.
+   *
+   * @param {string} hexString - The ABI encoded result.
+   * @returns {string} The decoded UTF-8 string.
+   *
+   * @example
+   * const data = format.decodeHexString('0xRETURNED_VALUE');
+   */
+  decodeHexString: (hexString: string): string => {
+    const hexData = strip0x(hexString);
+
+    if (hexData.length === WORD_LENGTH) {
+      return hexToUtf8(hexData.replace(/(00)+$/, ''));
+    }
+
+    const offset = Number(readWord(hexData, 0));
+    const length = Number(readWord(hexData, offset));
+    const start = (offset + 32) * 2;
+    const data = hexData.slice(start, start + length * 2);
+
+    if (data.length !== length * 2) {
+      throw new Error('[format/decodeHexString] error: ABI data is too short');
+    }
+
+    return hexToUtf8(data);
+  },
+
+  /**
+   * Decodes the result of a call that returns an `address`.
+   *
+   * @param {string} hexString - The ABI encoded result.
+   * @returns {string} The address, lowercase and `0x` prefixed.
+   *
+   * @example
+   * const data = format.decodeAddress('0xRETURNED_VALUE');
+   */
+  decodeAddress: (hexString: string): string => {
+    const word = readWord(strip0x(hexString), 0);
+    return `0x${word.toString(16).padStart(40, '0')}`;
+  },
+
+  /**
+   * Decodes the result of a call that returns a `uint256[]`.
+   *
+   * @param {string} hexString - The ABI encoded result.
+   * @returns {bigint[]} The decoded numbers.
+   *
+   * @example
+   * const data = format.decodeUint256Array('0xRETURNED_VALUE');
+   */
+  decodeUint256Array: (hexString: string): bigint[] => {
+    const hexData = strip0x(hexString);
+    const offset = Number(readWord(hexData, 0));
+    const length = Number(readWord(hexData, offset));
+
+    return Array.from({ length }, (_, i) =>
+      readWord(hexData, offset + 32 * (i + 1))
+    );
+  },
+
+  /**
+   * Encodes an address as one 32-byte ABI word.
+   *
+   * @param {string} address - The `0x` prefixed address.
+   * @returns {string} The encoded word, without the `0x` prefix.
+   *
+   * @example
+   * const data = format.encodeAddress('0xACCOUNT_ADDRESS');
+   */
+  encodeAddress: (address: string): string => {
+    if (!ADDRESS_PATTERN.test(address)) {
+      throw new Error(
+        `[format/encodeAddress] error: Invalid address: ${address}`
+      );
+    }
+
+    return strip0x(address).toLowerCase().padStart(WORD_LENGTH, '0');
+  },
+
+  /**
+   * Encodes an unsigned integer, such as a token id, as one 32-byte ABI word.
+   *
+   * @param {string | number | bigint} value - The value, as a decimal string, a `0x` prefixed hex string, a safe integer or a bigint.
+   * @returns {string} The encoded word, without the `0x` prefix.
+   *
+   * @example
+   * const data = format.encodeUint256('6522');
+   */
+  encodeUint256: (value: string | number | bigint): string => {
+    const valid =
+      typeof value === 'bigint' ||
+      (typeof value === 'number' && Number.isSafeInteger(value)) ||
+      (typeof value === 'string' &&
+        (DECIMAL_PATTERN.test(value) ||
+          (HEX_PATTERN.test(value) && value.length > 2)));
+
+    const number = valid ? BigInt(value) : -1n;
+
+    if (number < 0n || number > MAX_UINT256) {
+      throw new Error(
+        `[format/encodeUint256] error: Invalid uint256 value: ${value}`
+      );
+    }
+
+    return number.toString(16).padStart(WORD_LENGTH, '0');
+  },
+
+  /**
+   * Encodes the arguments of `balanceOfBatch(address[], uint256[])`: two dynamic arrays of the same length.
+   *
+   * @param {string[]} accountAddresses - The account addresses.
+   * @param {(string | number | bigint)[]} tokenIds - The token ids, one per account address.
+   * @returns {string} The encoded arguments, without the `0x` prefix.
+   *
+   * @example
+   * const data = format.encodeBalanceOfBatchArgs(['0xACCOUNT_ADDRESS_1', '0xACCOUNT_ADDRESS_2'], ['TOKEN_ID_1', 'TOKEN_ID_2']);
+   */
+  encodeBalanceOfBatchArgs: (
     accountAddresses: string[],
-    tokenIds: string[]
-  ): {
-    addresses: string;
-    ids: string;
-  } => {
+    tokenIds: (string | number | bigint)[]
+  ): string => {
     if (accountAddresses.length !== tokenIds.length) {
       throw new Error(
-        '[format/concatAddressesAndIds] error: Address and Token IDs arrays must be of the same length'
+        '[format/encodeBalanceOfBatchArgs] error: Address and Token IDs arrays must be of the same length'
       );
     }
 
-    let addresses: string = '';
-    let ids: string = '';
+    const length = format.encodeUint256(accountAddresses.length);
+    const addressesOffset = format.encodeUint256(64);
+    const idsOffset = format.encodeUint256(
+      64 + 32 * (accountAddresses.length + 1)
+    );
 
-    for (let i = 0; i < tokenIds.length; i++) {
-      addresses += accountAddresses[i]
-        .toLowerCase()
-        .substring(2)
-        .padStart(64, '0');
-      ids += tokenIds[i].substring(2).padStart(64, '0');
-    }
-
-    return { addresses, ids };
+    return [
+      addressesOffset,
+      idsOffset,
+      length,
+      ...accountAddresses.map(format.encodeAddress),
+      length,
+      ...tokenIds.map(format.encodeUint256),
+    ].join('');
   },
 
   /**
-   * Cleans a hexadecimal string returned in a JSON RPC response by removing unnecessary leading zeros.
+   * Checks that a contract address is a `0x` prefixed, 20-byte hex address.
    *
-   * @param {string} hexString - The hexadecimal string to be cleaned, usually representing a numeric value.
-   * @returns {string} The cleaned hexadecimal string with leading zeros removed, except for the '0x' prefix.
+   * @param {string} address - The address to check.
+   * @returns {string} The address, unchanged.
    *
    * @example
-   * const data = cleanHexString(0xRAW_HEX);
+   * const to = format.checkAddress('0xCONTRACT_ADDRESS');
    */
-  cleanHexString: (hexString: string): string => {
-    if (!hexString.startsWith('0x')) {
+  checkAddress: (address: string): string => {
+    if (!ADDRESS_PATTERN.test(address)) {
       throw new Error(
-        '[format/cleanHexString] error: Invalid hex string format'
+        `[format/checkAddress] error: Invalid address: ${address}`
       );
     }
 
-    return hexString.replace(/^(0x)0+/, '$1') || '0x0';
+    return address;
   },
 };

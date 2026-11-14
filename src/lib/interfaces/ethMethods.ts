@@ -32,6 +32,11 @@ export enum Erc20 {
   TotalSupply = '0x18160ddd',
 
   /**
+   * Selector for `decimals` function to get the number of decimals the token uses.
+   */
+  Decimals = '0x313ce567',
+
+  /**
    * Selector for `name` function to get the name of the token.
    */
   Name = '0x06fdde03',

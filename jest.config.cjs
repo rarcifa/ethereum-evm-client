@@ -1,10 +1,12 @@
+/** @type {import('jest').Config} */
 module.exports = {
   testEnvironment: 'node',
-  moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx'],
+  roots: ['<rootDir>/src'],
   transform: {
-    '^.+\\.(js|jsx|ts|tsx)$': 'babel-jest',
+    '^.+\\.ts$': 'babel-jest',
   },
   moduleNameMapper: {
     '^(\\.{1,2}/.*)\\.js$': '$1',
   },
+  collectCoverageFrom: ['src/**/*.ts', '!src/tests/**'],
 };
