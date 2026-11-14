@@ -3,6 +3,17 @@
 Fork the repository, work on a feature branch and open a pull request. `npm run check` must pass: formatting, lint,
 type check, tests and the package smoke test.
 
+## Errors
+
+- Throw only the classes of `src/lib/errors.ts`: `InvalidArgumentError` for caller input (rejected before any request),
+  `RequestError` for transport failures, `RpcError` for JSON-RPC errors and `InvalidResponseError` for answers that
+  do not decode. Never throw a plain `Error`.
+- The `context` is the `module/function` that detected the problem; the message is `[context] error: description`.
+- Catch only to wrap a lower-level error into one of these classes, passing it as `cause`. Never swallow an error,
+  rethrow it unchanged, or catch it to log.
+- Methods that send requests are `async`, so they reject and never throw synchronously.
+- The library never logs (`no-console`); callers own logging, retries and alerting.
+
 ## Documentation comments
 
 Every declaration in `src/` has a [TSDoc](https://tsdoc.org) comment. Types live in the TypeScript signatures, never

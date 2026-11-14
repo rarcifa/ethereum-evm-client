@@ -14,7 +14,16 @@
     "typescript/no-misused-promises": "error",
     "typescript/await-thenable": "error",
     "typescript/no-unnecessary-type-assertion": "error",
-    "import/no-cycle": "error"
+    "import/no-cycle": "error",
+    "no-throw-literal": "error",
+    "typescript/only-throw-error": "error",
+    "preserve-caught-error": "error",
+    "no-useless-catch": "error",
+    "unicorn/throw-new-error": "error",
+    "unicorn/error-message": "error",
+    "unicorn/catch-error-name": "error",
+    "typescript/prefer-promise-reject-errors": "error",
+    "typescript/use-unknown-in-catch-callback-variable": "error"
   },
   "env": {
     "builtin": true,

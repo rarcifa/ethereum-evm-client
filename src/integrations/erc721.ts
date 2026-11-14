@@ -32,8 +32,10 @@ export class Erc721Client {
    * @param accountAddress - The account address to fetch the balance from.
    * @param contractAddress - The contract address of the erc721 token.
    * @returns The number of tokens the account owns.
+   * @throws {@link InvalidArgumentError} When an address is invalid.
    * @throws {@link RpcError} When the node answers with a JSON-RPC error.
-   * @throws {@link Error} When an address is invalid, the request fails or the contract returns no data.
+   * @throws {@link RequestError} When the request fails or times out.
+   * @throws {@link InvalidResponseError} When the contract returns no data or an invalid answer.
    *
    * @example
    * ```ts
@@ -59,8 +61,10 @@ export class Erc721Client {
    * @param contractAddress - The contract address of the erc721 token.
    * @param tokenId - The token id.
    * @returns The owner address of the token, lowercase.
+   * @throws {@link InvalidArgumentError} When the address or token id is invalid.
    * @throws {@link RpcError} When the node answers with a JSON-RPC error, such as a revert for a token that does not exist.
-   * @throws {@link Error} When the address or token id is invalid, the request fails or the contract returns no data.
+   * @throws {@link RequestError} When the request fails or times out.
+   * @throws {@link InvalidResponseError} When the contract returns no data or an invalid answer.
    *
    * @example
    * ```ts
@@ -83,8 +87,10 @@ export class Erc721Client {
    * @param contractAddress - The contract address of the erc721 token.
    * @param tokenId - The token id.
    * @returns The uri of the token metadata, as the contract returns it.
+   * @throws {@link InvalidArgumentError} When the address or token id is invalid.
    * @throws {@link RpcError} When the node answers with a JSON-RPC error, such as a revert for a token that does not exist.
-   * @throws {@link Error} When the address or token id is invalid, the request fails or the contract returns no data.
+   * @throws {@link RequestError} When the request fails or times out.
+   * @throws {@link InvalidResponseError} When the contract returns no data or an invalid answer.
    *
    * @example
    * ```ts

@@ -30,7 +30,12 @@
 - `EthereumClient`, the class `createClient` returns. Each token standard is a class (`Erc20Client`, `Erc721Client`,
   `Erc1155Client`) that shares one JSON-RPC client.
 - `erc20.getDecimals`.
-- `RpcError`, with the JSON-RPC error `code` and `data`.
+- Typed errors: `EvmClientError` and its subclasses `InvalidArgumentError`, `RequestError`, `RpcError` (with the
+  JSON-RPC error `code` and `data`) and `InvalidResponseError`. Every error has `context` and keeps wrapped errors as
+  `cause`.
+- JSON-RPC errors sent with an HTTP error status are read as `RpcError`; answers that are not JSON-RPC, results that
+  are not hex, ABI data shorter than its lengths, over-wide addresses and more than 255 decimals are rejected as
+  `InvalidResponseError` instead of crashing or returning a wrong value.
 - The `timeout` client option, 30 seconds by default.
 - Address and token id validation before any request is sent.
 - Exported types: `ClientConfig`, `Erc20Client`, `Erc721Client`, `Erc1155Client`, `TokenId`.

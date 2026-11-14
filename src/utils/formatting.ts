@@ -1,3 +1,4 @@
+import { InvalidArgumentError, InvalidResponseError } from '../lib/errors.js';
 import type { TokenId } from '../lib/interfaces/tokenId.js';
 
 /** Length of one 32-byte ABI word, in hex digits. */
@@ -5,6 +6,9 @@ const WORD_LENGTH = 64;
 
 /** Largest value of a `uint256`. */
 const MAX_UINT256 = (1n << 256n) - 1n;
+
+/** Largest value of an `address`, 20 bytes. */
+const MAX_ADDRESS = (1n << 160n) - 1n;
 
 /** A `0x` prefixed, 20-byte hex address, in any letter case. */
 const ADDRESS_PATTERN = /^0x[0-9a-fA-F]{40}$/;
@@ -54,7 +58,7 @@ const hexToUtf8 = (hexData: string): string => {
  * @param hexData - The ABI encoded data, without the `0x` prefix.
  * @param byteOffset - The byte offset of the word.
  * @returns The word as a number.
- * @throws {@link Error} When the data ends before the word does.
+ * @throws {@link InvalidResponseError} When the data ends before the word does.
  *
  * @example
  * ```ts
@@ -64,7 +68,7 @@ const hexToUtf8 = (hexData: string): string => {
 const readWord = (hexData: string, byteOffset: number): bigint => {
   const word = hexData.slice(byteOffset * 2, byteOffset * 2 + WORD_LENGTH);
   if (word.length !== WORD_LENGTH) {
-    throw new Error('[format/readWord] error: ABI data is too short');
+    throw new InvalidResponseError('format/readWord', 'ABI data is too short');
   }
   return BigInt(`0x${word}`);
 };
@@ -86,7 +90,8 @@ export const format = {
    * @param tokenAmount - The amount in the smallest unit, as a hex string, a decimal string, a safe integer or a bigint.
    * @param decimals - The number of decimals the token uses.
    * @returns The formatted amount, such as `1234.5`.
-   * @throws {@link Error} When the amount is not a non-negative integer, or the decimals are not an integer from 0 to 255.
+   * @throws {@link InvalidResponseError} When the amount is not a non-negative integer, or the decimals are not an
+   * integer from 0 to 255.
    *
    * @example
    * ```ts
@@ -98,14 +103,16 @@ export const format = {
     decimals: number
   ): string => {
     if (!Number.isInteger(decimals) || decimals < 0 || decimals > 255) {
-      throw new Error(
-        `[format/formatTokenAmount] error: Invalid decimals: ${decimals}`
+      throw new InvalidResponseError(
+        'format/formatTokenAmount',
+        `Invalid decimals: ${decimals}`
       );
     }
 
     if (typeof tokenAmount === 'number' && !Number.isSafeInteger(tokenAmount)) {
-      throw new Error(
-        `[format/formatTokenAmount] error: Invalid amount: ${tokenAmount}`
+      throw new InvalidResponseError(
+        'format/formatTokenAmount',
+        `Invalid amount: ${tokenAmount}`
       );
     }
 
@@ -116,15 +123,18 @@ export const format = {
     let amount: bigint;
     try {
       amount = BigInt(tokenAmount);
-    } catch {
-      throw new Error(
-        `[format/formatTokenAmount] error: Invalid amount: ${tokenAmount}`
+    } catch (error) {
+      throw new InvalidResponseError(
+        'format/formatTokenAmount',
+        `Invalid amount: ${tokenAmount}`,
+        { cause: error }
       );
     }
 
     if (amount < 0n) {
-      throw new Error(
-        `[format/formatTokenAmount] error: Invalid amount: ${tokenAmount}`
+      throw new InvalidResponseError(
+        'format/formatTokenAmount',
+        `Invalid amount: ${tokenAmount}`
       );
     }
 
@@ -145,7 +155,8 @@ export const format = {
    *
    * @param weiValue - The value in Wei, as a hex string, a safe integer or a bigint.
    * @returns The value in Ether, such as `1.5`.
-   * @throws {@link Error} When a string value is not `0x` prefixed hex, or the value is not a non-negative integer.
+   * @throws {@link InvalidResponseError} When a string value is not `0x` prefixed hex, or the value is not a
+   * non-negative integer.
    *
    * @example
    * ```ts
@@ -154,8 +165,9 @@ export const format = {
    */
   weiToEther: (weiValue: string | number | bigint): string => {
     if (typeof weiValue === 'string' && !HEX_PATTERN.test(weiValue)) {
-      throw new Error(
-        '[format/weiToEther] error: Invalid input format for Wei value'
+      throw new InvalidResponseError(
+        'format/weiToEther',
+        'Invalid input format for Wei value'
       );
     }
 
@@ -168,7 +180,7 @@ export const format = {
    *
    * @param hexString - The ABI encoded result.
    * @returns The decoded UTF-8 string.
-   * @throws {@link Error} When the data is shorter than its offset and length say.
+   * @throws {@link InvalidResponseError} When the data is shorter than its offset and length say.
    *
    * @example
    * ```ts
@@ -182,16 +194,20 @@ export const format = {
       return hexToUtf8(hexData.replace(/(00)+$/, ''));
     }
 
-    const offset = Number(readWord(hexData, 0));
-    const length = Number(readWord(hexData, offset));
-    const start = (offset + 32) * 2;
-    const data = hexData.slice(start, start + length * 2);
+    const byteLength = BigInt(hexData.length / 2);
+    const offset = readWord(hexData, 0);
+    const length =
+      offset + 32n <= byteLength ? readWord(hexData, Number(offset)) : 0n;
 
-    if (data.length !== length * 2) {
-      throw new Error('[format/decodeHexString] error: ABI data is too short');
+    if (offset + 32n + length > byteLength) {
+      throw new InvalidResponseError(
+        'format/decodeHexString',
+        'ABI data is too short'
+      );
     }
 
-    return hexToUtf8(data);
+    const start = Number(offset + 32n) * 2;
+    return hexToUtf8(hexData.slice(start, start + Number(length) * 2));
   },
 
   /**
@@ -199,7 +215,7 @@ export const format = {
    *
    * @param hexString - The ABI encoded result.
    * @returns The address, lowercase and `0x` prefixed.
-   * @throws {@link Error} When the data is shorter than one word.
+   * @throws {@link InvalidResponseError} When the data is shorter than one word, or the word is wider than an address.
    *
    * @example
    * ```ts
@@ -208,6 +224,14 @@ export const format = {
    */
   decodeAddress: (hexString: string): string => {
     const word = readWord(strip0x(hexString), 0);
+
+    if (word > MAX_ADDRESS) {
+      throw new InvalidResponseError(
+        'format/decodeAddress',
+        'The result is not an address'
+      );
+    }
+
     return `0x${word.toString(16).padStart(40, '0')}`;
   },
 
@@ -216,7 +240,7 @@ export const format = {
    *
    * @param hexString - The ABI encoded result.
    * @returns The decoded numbers.
-   * @throws {@link Error} When the data is shorter than its offset and length say.
+   * @throws {@link InvalidResponseError} When the data is shorter than its offset and length say.
    *
    * @example
    * ```ts
@@ -225,11 +249,20 @@ export const format = {
    */
   decodeUint256Array: (hexString: string): bigint[] => {
     const hexData = strip0x(hexString);
-    const offset = Number(readWord(hexData, 0));
-    const length = Number(readWord(hexData, offset));
+    const byteLength = BigInt(hexData.length / 2);
+    const offset = readWord(hexData, 0);
+    const length =
+      offset + 32n <= byteLength ? readWord(hexData, Number(offset)) : 0n;
 
-    return Array.from({ length }, (_, i) =>
-      readWord(hexData, offset + 32 * (i + 1))
+    if (offset + 32n * (length + 1n) > byteLength) {
+      throw new InvalidResponseError(
+        'format/decodeUint256Array',
+        'ABI data is too short'
+      );
+    }
+
+    return Array.from({ length: Number(length) }, (_, i) =>
+      readWord(hexData, Number(offset) + 32 * (i + 1))
     );
   },
 
@@ -238,7 +271,7 @@ export const format = {
    *
    * @param address - The `0x` prefixed address.
    * @returns The encoded word, without the `0x` prefix.
-   * @throws {@link Error} When the address is not a `0x` prefixed, 20-byte hex address.
+   * @throws {@link InvalidArgumentError} When the address is not a `0x` prefixed, 20-byte hex address.
    *
    * @example
    * ```ts
@@ -247,8 +280,9 @@ export const format = {
    */
   encodeAddress: (address: string): string => {
     if (!ADDRESS_PATTERN.test(address)) {
-      throw new Error(
-        `[format/encodeAddress] error: Invalid address: ${address}`
+      throw new InvalidArgumentError(
+        'format/encodeAddress',
+        `Invalid address: ${address}`
       );
     }
 
@@ -260,7 +294,7 @@ export const format = {
    *
    * @param value - The value, as a decimal string, a `0x` prefixed hex string, a safe integer or a bigint.
    * @returns The encoded word, without the `0x` prefix.
-   * @throws {@link Error} When the value is malformed, negative or larger than a `uint256`.
+   * @throws {@link InvalidArgumentError} When the value is malformed, negative or larger than a `uint256`.
    *
    * @example
    * ```ts
@@ -278,8 +312,9 @@ export const format = {
     const number = valid ? BigInt(value) : -1n;
 
     if (number < 0n || number > MAX_UINT256) {
-      throw new Error(
-        `[format/encodeUint256] error: Invalid uint256 value: ${value}`
+      throw new InvalidArgumentError(
+        'format/encodeUint256',
+        `Invalid uint256 value: ${value}`
       );
     }
 
@@ -292,7 +327,7 @@ export const format = {
    * @param accountAddresses - The account addresses.
    * @param tokenIds - The token ids, one per account address.
    * @returns The encoded arguments, without the `0x` prefix.
-   * @throws {@link Error} When the arrays differ in length, or an address or token id is invalid.
+   * @throws {@link InvalidArgumentError} When the arrays differ in length, or an address or token id is invalid.
    *
    * @example
    * ```ts
@@ -304,8 +339,9 @@ export const format = {
     tokenIds: TokenId[]
   ): string => {
     if (accountAddresses.length !== tokenIds.length) {
-      throw new Error(
-        '[format/encodeBalanceOfBatchArgs] error: Address and Token IDs arrays must be of the same length'
+      throw new InvalidArgumentError(
+        'format/encodeBalanceOfBatchArgs',
+        'Address and Token IDs arrays must be of the same length'
       );
     }
 
@@ -330,7 +366,7 @@ export const format = {
    *
    * @param address - The address to check.
    * @returns The address, unchanged.
-   * @throws {@link Error} When the address is not a `0x` prefixed, 20-byte hex address.
+   * @throws {@link InvalidArgumentError} When the address is not a `0x` prefixed, 20-byte hex address.
    *
    * @example
    * ```ts
@@ -339,11 +375,28 @@ export const format = {
    */
   checkAddress: (address: string): string => {
     if (!ADDRESS_PATTERN.test(address)) {
-      throw new Error(
-        `[format/checkAddress] error: Invalid address: ${address}`
+      throw new InvalidArgumentError(
+        'format/checkAddress',
+        `Invalid address: ${address}`
       );
     }
 
     return address;
   },
+
+  /**
+   * Checks that a value is a `0x` prefixed hex string.
+   *
+   * @param value - The value to check.
+   * @returns Whether the value is a `0x` prefixed hex string.
+   *
+   * @example
+   * ```ts
+   * if (!format.isHex(result)) {
+   *   throw new InvalidResponseError(context, 'The result is not a hex string');
+   * }
+   * ```
+   */
+  isHex: (value: unknown): value is string =>
+    typeof value === 'string' && HEX_PATTERN.test(value),
 };

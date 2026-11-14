@@ -16,11 +16,30 @@ export interface ReceivedRequest {
 }
 
 /**
- * Function that builds the `result` or `error` member of the response to one JSON-RPC request.
+ * An HTTP answer sent as it is, to test answers that are not a JSON-RPC response.
+ */
+export interface RawAnswer {
+  /** The HTTP status code. */
+  status: number;
+
+  /** The `Content-Type` header. */
+  contentType: string;
+
+  /** The body, sent unchanged. */
+  body: string;
+}
+
+/**
+ * Function that builds the answer to one JSON-RPC request: the `result` or `error` member of a JSON-RPC response, a
+ * raw HTTP answer, or no answer at all.
  */
 export type RpcHandler = (
   body: JsonRpcRequestPayload
-) => { result: unknown } | { error: { code: number; message: string } };
+) =>
+  | { result: unknown }
+  | { error: { code: number; message: string } }
+  | { raw: RawAnswer }
+  | { hang: true };
 
 /**
  * A JSON-RPC server on the loopback interface, for tests that need no network.
@@ -56,10 +75,21 @@ export const startRpcServer = async (
     req.on('end', () => {
       const body: JsonRpcRequestPayload = JSON.parse(raw);
       requests.push({ body, headers: req.headers });
+      const answer = handler(body);
+
+      if ('hang' in answer) {
+        return;
+      }
+
+      if ('raw' in answer) {
+        res.statusCode = answer.raw.status;
+        res.setHeader('Content-Type', answer.raw.contentType);
+        res.end(answer.raw.body);
+        return;
+      }
+
       res.setHeader('Content-Type', 'application/json');
-      res.end(
-        JSON.stringify({ jsonrpc: '2.0', id: body.id, ...handler(body) })
-      );
+      res.end(JSON.stringify({ jsonrpc: '2.0', id: body.id, ...answer }));
     });
   });
 
@@ -77,7 +107,8 @@ export const startRpcServer = async (
     requests,
     close: () =>
       new Promise<void>((resolve, reject) => {
-        server.close((e) => (e ? reject(e) : resolve()));
+        server.closeAllConnections();
+        server.close((error) => (error ? reject(error) : resolve()));
       }),
   };
 };

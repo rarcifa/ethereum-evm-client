@@ -1,7 +1,11 @@
 import type { JsonRpcClient } from '../lib/client/jsonRpcClient.js';
+import { InvalidResponseError } from '../lib/errors.js';
 import { Erc20, EthMethod } from '../lib/interfaces/ethMethods.js';
 
 import { format } from '../utils/formatting.js';
+
+/** Largest number of decimals a token can use: `decimals()` returns a `uint8`. */
+const MAX_DECIMALS = 255n;
 
 /**
  * Client for erc20 token data, and native token balances, read over JSON-RPC.
@@ -30,8 +34,10 @@ export class Erc20Client {
    *
    * @param accountAddress - The account address to fetch the balance from.
    * @returns The native token balance of the account, in Ether.
+   * @throws {@link InvalidArgumentError} When the address is invalid.
    * @throws {@link RpcError} When the node answers with a JSON-RPC error.
-   * @throws {@link Error} When the address is invalid, the request fails or the node returns no result.
+   * @throws {@link RequestError} When the request fails or times out.
+   * @throws {@link InvalidResponseError} When the node returns no result or an invalid answer.
    *
    * @example
    * ```ts
@@ -53,8 +59,11 @@ export class Erc20Client {
    *
    * @param contractAddress - The contract address of the erc20 token.
    * @returns The number of decimals the token uses.
+   * @throws {@link InvalidArgumentError} When the address is invalid.
    * @throws {@link RpcError} When the node answers with a JSON-RPC error.
-   * @throws {@link Error} When the address is invalid, the request fails or the contract returns no data.
+   * @throws {@link RequestError} When the request fails or times out.
+   * @throws {@link InvalidResponseError} When the contract returns no data, an invalid answer, or more than 255
+   * decimals.
    *
    * @example
    * ```ts
@@ -68,7 +77,16 @@ export class Erc20Client {
       'erc20/getDecimals'
     );
 
-    return Number(format.formatTokenAmount(result, 0));
+    const decimals = BigInt(result);
+
+    if (decimals > MAX_DECIMALS) {
+      throw new InvalidResponseError(
+        'erc20/getDecimals',
+        `Invalid decimals: ${decimals}`
+      );
+    }
+
+    return Number(decimals);
   }
 
   /**
@@ -77,8 +95,10 @@ export class Erc20Client {
    * @param accountAddress - The account address to fetch the balance from.
    * @param contractAddress - The contract address of the erc20 token.
    * @returns The erc20 token balance of the account.
+   * @throws {@link InvalidArgumentError} When an address is invalid.
    * @throws {@link RpcError} When the node answers with a JSON-RPC error.
-   * @throws {@link Error} When an address is invalid, the request fails or the contract returns no data.
+   * @throws {@link RequestError} When the request fails or times out.
+   * @throws {@link InvalidResponseError} When the contract returns no data or an invalid answer.
    *
    * @example
    * ```ts
@@ -106,8 +126,10 @@ export class Erc20Client {
    *
    * @param contractAddress - The contract address of the erc20 token.
    * @returns The name of the token.
+   * @throws {@link InvalidArgumentError} When the address is invalid.
    * @throws {@link RpcError} When the node answers with a JSON-RPC error.
-   * @throws {@link Error} When the address is invalid, the request fails or the contract returns no data.
+   * @throws {@link RequestError} When the request fails or times out.
+   * @throws {@link InvalidResponseError} When the contract returns no data or an invalid answer.
    *
    * @example
    * ```ts
@@ -129,8 +151,10 @@ export class Erc20Client {
    *
    * @param contractAddress - The contract address of the erc20 token.
    * @returns The symbol of the token.
+   * @throws {@link InvalidArgumentError} When the address is invalid.
    * @throws {@link RpcError} When the node answers with a JSON-RPC error.
-   * @throws {@link Error} When the address is invalid, the request fails or the contract returns no data.
+   * @throws {@link RequestError} When the request fails or times out.
+   * @throws {@link InvalidResponseError} When the contract returns no data or an invalid answer.
    *
    * @example
    * ```ts
@@ -152,8 +176,10 @@ export class Erc20Client {
    *
    * @param contractAddress - The contract address of the erc20 token.
    * @returns The total supply of the token.
+   * @throws {@link InvalidArgumentError} When the address is invalid.
    * @throws {@link RpcError} When the node answers with a JSON-RPC error.
-   * @throws {@link Error} When the address is invalid, the request fails or the contract returns no data.
+   * @throws {@link RequestError} When the request fails or times out.
+   * @throws {@link InvalidResponseError} When the contract returns no data or an invalid answer.
    *
    * @example
    * ```ts

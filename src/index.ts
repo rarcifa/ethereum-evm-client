@@ -10,4 +10,10 @@ export type { Erc20Client } from './integrations/erc20.js';
 export type { Erc721Client } from './integrations/erc721.js';
 export type { Erc1155Client } from './integrations/erc1155.js';
 export type { TokenId } from './lib/interfaces/tokenId.js';
-export { RpcError } from './lib/errors.js';
+export {
+  EvmClientError,
+  InvalidArgumentError,
+  InvalidResponseError,
+  RequestError,
+  RpcError,
+} from './lib/errors.js';

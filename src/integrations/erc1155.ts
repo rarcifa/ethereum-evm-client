@@ -33,8 +33,10 @@ export class Erc1155Client {
    * @param contractAddress - The contract address of the erc1155 token.
    * @param tokenId - The token id.
    * @returns The balance of the token id at the account address.
+   * @throws {@link InvalidArgumentError} When an address or the token id is invalid.
    * @throws {@link RpcError} When the node answers with a JSON-RPC error.
-   * @throws {@link Error} When an address or the token id is invalid, the request fails or the contract returns no data.
+   * @throws {@link RequestError} When the request fails or times out.
+   * @throws {@link InvalidResponseError} When the contract returns no data or an invalid answer.
    *
    * @example
    * ```ts
@@ -62,8 +64,10 @@ export class Erc1155Client {
    * @param contractAddress - The contract address of the erc1155 token.
    * @param tokenIds - The token ids, one per account address.
    * @returns The balance of each pair, in the order of the arguments.
+   * @throws {@link InvalidArgumentError} When the arrays differ in length, or an address or token id is invalid.
    * @throws {@link RpcError} When the node answers with a JSON-RPC error.
-   * @throws {@link Error} When the arrays differ in length, an address or token id is invalid, the request fails or the contract returns no data.
+   * @throws {@link RequestError} When the request fails or times out.
+   * @throws {@link InvalidResponseError} When the contract returns no data or an invalid answer.
    *
    * @example
    * ```ts
